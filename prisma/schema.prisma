@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Relance {
+  id        Int      @id @default(autoincrement())
+  email     String
+  firstName String
+  lastName  String
+  phone     String
+  userId    Int
+  sessionId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  session   Session  @relation(fields: [sessionId], references: [id])
+
+  @@unique([userId, sessionId])
+}
+
+model Session {
+  id              Int          @id @default(autoincrement())
+  numeroStageAnts String
+  price           Float        @default(200.0)
+  description     String
+  startDate       DateTime
+  endDate         DateTime
+  location        String
+  capacity        Int          @default(20)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  instructorId    Int
+  psychologueId   Int
+
+  // Relations
+  instructor      Instructor   @relation(fields: [instructorId], references: [id])
+  psychologue     Psychologue  @relation(fields: [psychologueId], references: [id])
+  users           SessionUsers[]
+  relances        Relance[]
+}
+
+model User {
+  id                  Int          @id @default(autoincrement())
+  civilite            String
+  nom                 String
+  prenom              String
+  prenom1             String?      // Nullable
+  prenom2             String?      // Nullable
+  adresse             String
+  codePostal          String
+  ville               String
+  telephone           String
+  email               String       @unique
+  nationalite         String
+  dateNaissance       DateTime        
+  codePostalNaissance String
+  createdAt           DateTime     @default(now())
+
+  // Relations
+  sessionUsers        SessionUsers[]
+  payments            Payment[]
+  relances            Relance[]
+
+  // Champs pour le suivi des relances
+  relanceCount        Int          @default(0)
+  lastRelanceAt       DateTime?
+
+  // Champs pour les scans d'images confidentielles
+  imageScan1          String?      // URL S3 ou chemin local
+  imageScan2          String?      // URL S3 ou chemin local
+}
+
+model SessionUsers {
+  id                  Int          @id @default(autoincrement())
+  sessionId           Int
+  userId              Int
+  numeroPermis        String
+  dateDelivrancePermis DateTime
+  prefecture          String
+  etatPermis          String
+  casStage            String
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  // Relations
+  session             Session      @relation(fields: [sessionId], references: [id])
+  user                User         @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId]) // Un utilisateur ne peut s'inscrire qu'une fois à une session
+}
+model Instructor {
+  id                           Int        @id @default(autoincrement())
+  email                        String     @unique
+  firstName                    String
+  lastName                     String
+  numeroAutorisationPrefectorale String
+  createdAt                    DateTime   @default(now())
+  updatedAt                    DateTime   @updatedAt
+
+  // Relations
+  sessions  Session[]
+}
+
+model Psychologue {
+  id                           Int        @id @default(autoincrement())
+  email                        String     @unique
+  firstName                    String
+  lastName                     String
+  numeroAutorisationPrefectorale String
+  createdAt                    DateTime   @default(now())
+  updatedAt                    DateTime   @updatedAt
+
+  // Relations
+  sessions  Session[]
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Float
+  method    String
+  paidAt    DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+}
