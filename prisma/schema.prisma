@@ -45,6 +45,7 @@ model Session {
   updatedAt       DateTime     @updatedAt
   instructorId    Int
   psychologueId   Int
+  isArchived      Boolean      @default(false) 
 
   // Relations
   instructor      Instructor   @relation(fields: [instructorId], references: [id])
