@@ -32,27 +32,6 @@ model Relance {
   @@unique([userId, sessionId])
 }
 
-model Session {
-  id              Int          @id @default(autoincrement())
-  numeroStageAnts String
-  price           Float        @default(200.0)
-  description     String
-  startDate       DateTime
-  endDate         DateTime
-  location        String
-  capacity        Int          @default(20)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  instructorId    Int
-  psychologueId   Int
-  isArchived      Boolean      @default(false) 
-
-  // Relations
-  instructor      Instructor   @relation(fields: [instructorId], references: [id])
-  psychologue     Psychologue  @relation(fields: [psychologueId], references: [id])
-  users           SessionUsers[]
-  relances        Relance[]
-}
 
 model User {
   id                  Int          @id @default(autoincrement())
@@ -103,14 +82,39 @@ model SessionUsers {
 
   @@unique([sessionId, userId]) // Un utilisateur ne peut s'inscrire qu'une fois à une session
 }
+
+model Session {
+  id              Int          @id @default(autoincrement())
+  numeroStageAnts String
+  price           Float        @default(200.0)
+  description     String
+  startDate       DateTime
+  endDate         DateTime
+  location        String
+  capacity        Int          @default(20)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  instructorId    Int
+  psychologueId   Int
+  isArchived      Boolean      @default(false) 
+
+  // Relations
+  instructor      Instructor   @relation(fields: [instructorId], references: [id])
+  psychologue     Psychologue  @relation(fields: [psychologueId], references: [id])
+  users           SessionUsers[]
+  relances        Relance[]
+}
+
 model Instructor {
   id                           Int        @id @default(autoincrement())
   email                        String     @unique
   firstName                    String
   lastName                     String
   numeroAutorisationPrefectorale String
+  phone                         String     // Nouveau champ pour le numéro de téléphone
   createdAt                    DateTime   @default(now())
   updatedAt                    DateTime   @updatedAt
+  isArchived      Boolean      @default(false) 
 
   // Relations
   sessions  Session[]
@@ -122,12 +126,14 @@ model Psychologue {
   firstName                    String
   lastName                     String
   numeroAutorisationPrefectorale String
+  phone                         String     // Nouveau champ pour le numéro de téléphone
   createdAt                    DateTime   @default(now())
   updatedAt                    DateTime   @updatedAt
-
+  isArchived      Boolean      @default(false) 
   // Relations
   sessions  Session[]
 }
+
 
 model Payment {
   id        Int      @id @default(autoincrement())

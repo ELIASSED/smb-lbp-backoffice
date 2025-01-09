@@ -2,43 +2,56 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="bg-yellow-600 text-white p-4 shadow">
-      {/* Titre principal */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">SMB LBP Back-Office</h1>
-        {/* Bouton pour le menu en mode mobile */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden bg-white text-grey p-2 rounded focus:outline-none"
-        >
-          {menuOpen ? "Fermer" : "Menu"}
-        </button>
+    <header className="bg-yellow-600 text-white shadow fixed top-0 left-0 w-64 h-full flex flex-col items-start p-8">
+      {/* Logo et Titre */}
+      <div className="flex items-center mb-8">
+        {/* Lien autour de l'image pour rediriger vers la page d'accueil */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/smblogo.png"
+            width={100}
+            height={50}
+            alt="Exemple Banner"
+            className="h-20 w-auto"
+          />
+        </Link>
       </div>
 
-      {/* Navigation principale */}
-      <div
-        className={`${
-          menuOpen ? "block" : "hidden"
-        } md:block bg-grey-500 rounded-b-lg mt-4`}
+      {/* Navigation verticale */}
+      <nav className="flex flex-col space-y-4 w-full">
+        <Link
+          href="/sessions"
+          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
+        >
+          Sessions
+        </Link>
+        <Link
+          href="/staff"
+          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
+        >
+          Staff
+        </Link>
+        <Link
+          href="/inscriptions"
+          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
+        >
+          Inscriptions
+        </Link>
+      </nav>
+
+      {/* Bouton pour le menu mobile */}
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="md:hidden bg-white text-gray-800 p-2 rounded focus:outline-none mt-auto"
       >
-        <nav className="flex flex-col md:flex-row justify-center md:justify-end px-4 py-3 md:space-x-8">
-          <Link href="/sessions" className="text-base uppercase hover:text-gray-200">
-            Sessions
-          </Link>
-          <Link href="/staff
-          " className="text-base uppercase hover:text-gray-200">
-            Staff
-          </Link>
-          <Link href="/psychologues" className="text-base uppercase hover:text-gray-200">
-            Psychologues
-          </Link>
-        </nav>
-      </div>
+        {menuOpen ? "Fermer" : "Menu"}
+      </button>
     </header>
   );
 }

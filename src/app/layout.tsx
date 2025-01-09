@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 
 
 export const metadata = {
-  title: 'Sécurité Routière',
+  title: 'SMB Back Office',
   description: 'Site inspiré de l’identité visuelle de la Sécurité Routière.',
 };
 
