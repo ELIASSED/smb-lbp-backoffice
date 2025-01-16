@@ -73,12 +73,8 @@ const StaffListItem: React.FC<{
         <div className="text-sm text-gray-600">
           Numéro Agrément Ants: {staff.numeroAutorisationPrefectorale}
         </div>
-        <div className="text-sm text-gray-600">
-          Email: {staff.email}
-        </div>
-        <div className="text-sm text-gray-600">
-          Téléphone: {staff.phone}
-        </div>
+        <div className="text-sm text-gray-600">Email: {staff.email}</div>
+        <div className="text-sm text-gray-600">Téléphone: {staff.phone}</div>
       </div>
       <div className="flex space-x-2">
         <button
@@ -117,7 +113,7 @@ const StaffForm: React.FC<{
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -247,18 +243,12 @@ const StaffPage: React.FC = () => {
         throw new Error("Erreur lors de la récupération des données");
       }
 
-      const [instructorsData, psychologistsData] = await Promise.all([
-        instructorsRes.json(),
-        psychologistsRes.json(),
-      ]);
+      const instructors = await instructorsRes.json();
+      const psychologists = await psychologistsRes.json();
 
-      setStaffData({
-        instructors: Array.isArray(instructorsData) ? instructorsData : [],
-        psychologists: Array.isArray(psychologistsData) ? psychologistsData : [],
-      });
+      setStaffData({ instructors, psychologists });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
-      setStaffData({ instructors: [], psychologists: [] });
     } finally {
       setLoading(false);
     }
@@ -269,33 +259,61 @@ const StaffPage: React.FC = () => {
   }, []);
 
   const handleStaffOperation = async (
-    operation: "create" | "edit" | "delete",
+    operation: "create" | "edit" | "archive",
     staffType: StaffType,
     data?: StaffFormData
-  ) => {
-    const baseUrl = staffType === "instructor" ? "/api/animateurs" : "/api/psychologues";
-    const url = operation === "create" 
-      ? baseUrl 
-      : `${baseUrl}/${modalState.selectedStaff?.id}`;
-
+) => {
     try {
-      const response = await fetch(url, {
-        method: operation === "create" ? "POST" : operation === "edit" ? "PUT" : "DELETE",
-        headers: operation !== "delete" ? { "Content-Type": "application/json" } : undefined,
-        body: operation !== "delete" ? JSON.stringify(data) : undefined,
-      });
+        const baseUrl =
+            staffType === "instructor"
+                ? "/api/animateurs"
+                : "/api/psychologues";
 
-      if (!response.ok) {
-        throw new Error("Opération échouée");
-      }
+        let url = baseUrl;
+        let config: RequestInit = {
+            headers: { "Content-Type": "application/json" },
+        };
 
-      await fetchStaffData();
-      closeModal();
+        if (operation === "edit" || operation === "archive") {
+            if (!modalState.selectedStaff?.id) {
+                throw new Error("ID manquant");
+            }
+            url = `${baseUrl}/${modalState.selectedStaff.id}`;
+        }
+
+        switch (operation) {
+            case "create":
+                config.method = "POST";
+                config.body = JSON.stringify(data);
+                break;
+            case "edit":
+                config.method = "PUT";
+                config.body = JSON.stringify(data);
+                break;
+            case "archive":
+                config.method = "PUT";
+                config.body = JSON.stringify({ isArchived: true });
+                break;
+        }
+
+        const response = await fetch(url, config);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Erreur lors de l'opération");
+        }
+
+        alert("Opération réussie !");
+        await fetchStaffData();
+        closeModal();
     } catch (err) {
-      console.error("Erreur:", err);
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+        console.error(err);
+        alert(err instanceof Error ? err.message : "Erreur inconnue");
     }
-  };
+};
+
+
+
 
   const openModal = (mode: ModalMode, staffType: StaffType, staff?: Staff) => {
     setModalState({
@@ -380,11 +398,12 @@ const StaffPage: React.FC = () => {
                 Annuler
               </button>
               <button
-                onClick={() => handleStaffOperation("delete", modalState.staffType!)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Supprimer
-              </button>
+    onClick={() => handleStaffOperation("archive", modalState.staffType!)}
+    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+>
+    Archiver
+</button>
+
             </div>
           </div>
         ) : (
@@ -422,20 +441,23 @@ const StaffPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="space-y-8">
-        {renderStaffSection(
-          "Liste des BAFM",
-          "instructor",
-          staffData.instructors
-        )}
-        {renderStaffSection(
-          "Liste des Psychologues",
-          "psychologist",
-          staffData.psychologists
-        )}
+    <div className="p-6">
+      <h2 className="text-2xl font-semibold mb-6">Gestion des Animateurs et Psychologues</h2>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="space-y-8">
+          {renderStaffSection(
+            "Liste des BAFM",
+            "instructor",
+            staffData.instructors
+          )}
+          {renderStaffSection(
+            "Liste des Psychologues",
+            "psychologist",
+            staffData.psychologists
+          )}
+        </div>
+        {renderModal()}
       </div>
-      {renderModal()}
     </div>
   );
 };

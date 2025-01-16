@@ -6,7 +6,8 @@ CREATE TABLE "Relance" (
     "lastName" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "userId" INTEGER NOT NULL,
-    "sessionId" INTEGER NOT NULL,
+    "lastSessionId" INTEGER,
+    "profession" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -115,7 +116,7 @@ CREATE TABLE "Payment" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Relance_userId_sessionId_key" ON "Relance"("userId", "sessionId");
+CREATE UNIQUE INDEX "Relance_userId_lastSessionId_key" ON "Relance"("userId", "lastSessionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -133,7 +134,7 @@ CREATE UNIQUE INDEX "Psychologue_email_key" ON "Psychologue"("email");
 ALTER TABLE "Relance" ADD CONSTRAINT "Relance_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Relance" ADD CONSTRAINT "Relance_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Relance" ADD CONSTRAINT "Relance_lastSessionId_fkey" FOREIGN KEY ("lastSessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SessionUsers" ADD CONSTRAINT "SessionUsers_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

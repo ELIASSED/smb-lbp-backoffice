@@ -3,13 +3,29 @@ import React, { useState, useEffect } from "react";
 import { PencilIcon, PlusCircleIcon, TrashIcon } from "lucide-react";
 
 interface Stage {
-  id: string;
+  id: number;
   numeroStageAnts: string;
-  location: string;
-  capacity: number;
   price: number;
+  description: string;
   startDate: string;
   endDate: string;
+  location: string;
+  capacity: number;
+  instructor: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  psychologue: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  isArchived: boolean;
 }
 
 interface ModalState {
@@ -25,6 +41,8 @@ interface StageFormData {
   price: number;
   startDate: string;
   endDate: string;
+  instructorId: string;
+  psychologueId: string;
 }
 
 const Modal: React.FC<{
@@ -61,16 +79,21 @@ const StageModal: React.FC<{
   onSubmit: (data: StageFormData) => void;
 }> = ({ isOpen, onClose, mode, stage, onSubmit }) => {
   const [formData, setFormData] = useState<StageFormData>({
-    numeroStageAnts: stage?.numeroStageAnts || '',
-    location: stage?.location || '',
-    capacity: stage?.capacity || 0,
-    price: stage?.price || 0,
-    startDate: stage?.startDate ? new Date(stage.startDate).toISOString().split('T')[0] : '',
-    endDate: stage?.endDate ? new Date(stage.endDate).toISOString().split('T')[0] : '',
+    numeroStageAnts: '',
+    location: '',
+    capacity: 0,
+    price: 0,
+    startDate: '',
+    endDate: '',
+    instructorId: '',
+    psychologueId: ''
   });
 
+  const [instructorList, setInstructorList] = useState<any[]>([]);
+  const [psychologistList, setPsychologistList] = useState<any[]>([]);
+
   useEffect(() => {
-    if (stage) {
+    if (stage && (mode === 'edit' || mode === 'delete')) {
       setFormData({
         numeroStageAnts: stage.numeroStageAnts,
         location: stage.location,
@@ -78,11 +101,42 @@ const StageModal: React.FC<{
         price: stage.price,
         startDate: new Date(stage.startDate).toISOString().split('T')[0],
         endDate: new Date(stage.endDate).toISOString().split('T')[0],
+        instructorId: stage.instructor?.id.toString() || '',
+        psychologueId: stage.psychologue?.id.toString() || ''
       });
     }
-  }, [stage]);
+  }, [stage, mode]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const [instructorRes, psychologistRes] = await Promise.all([
+          fetch("/api/animateurs"),
+          fetch("/api/psychologues"),
+        ]);
+
+        if (!instructorRes.ok || !psychologistRes.ok) {
+          throw new Error("Erreur lors de la récupération des animateurs et psychologues");
+        }
+
+        const [instructorData, psychologistData] = await Promise.all([
+          instructorRes.json(),
+          psychologistRes.json(),
+        ]);
+
+        setInstructorList(instructorData);
+        setPsychologistList(psychologistData);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    if (isOpen) {
+      fetchStaff();
+    }
+  }, [isOpen]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -90,145 +144,198 @@ const StageModal: React.FC<{
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
-
-  const titles = {
-    create: 'Créer un nouveau stage',
-    edit: 'Modifier le stage',
-    delete: 'Supprimer le stage'
+  const handleDelete = async () => {
+    if (!modalState.selectedStage?.id) {
+      console.error("ID manquant pour la suppression");
+      return;
+    }
+  
+    try {
+      const response = await fetch(`/api/sessions/${modalState.selectedStage.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+  
+      await fetchStages(); // Recharger les données
+      closeModal();
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      alert("Une erreur s'est produite lors de l'archivage du stage.");
+    }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={titles[mode || 'create']}>
-      {mode === 'delete' ? (
+  if (mode === "delete") {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Archiver le stage">
         <div>
-          <p className="mb-4">Êtes-vous sûr de vouloir supprimer ce stage ?</p>
+          <p className="mb-4">Êtes-vous sûr de vouloir archiver ce stage ?</p>
           <p className="font-medium mb-6">{stage?.numeroStageAnts}</p>
           <div className="flex justify-end">
             <button
               onClick={() => onSubmit(formData)}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
             >
-              Supprimer
+              Archiver
             </button>
           </div>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Numéro de stage
-              </label>
-              <input
-                type="text"
-                name="numeroStageAnts"
-                value={formData.numeroStageAnts}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+      </Modal>
+    );
+  }
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Lieu
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Prix
-              </label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+  return (
+    <Modal 
+    isOpen={isOpen} 
+    onClose={onClose} 
+    title={mode === 'create' ? 'Créer un nouveau stage' : 'Modifier le stage'}
+  >
+    <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Numéro de stage</label>
+          <input
+            type="text"
+            name="numeroStageAnts"
+            value={formData.numeroStageAnts}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Capacité
-              </label>
-              <input
-                type="number"
-                name="capacity"
-                value={formData.capacity}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Lieu</label>
+          <input
+            type="text"
+            name="location"
+            value={formData.location}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Date de début
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Prix</label>
+          <input
+            type="number"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Date de fin
-              </label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Capacité</label>
+          <input
+            type="number"
+            name="capacity"
+            value={formData.capacity}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
 
-          <div className="flex justify-end mt-6">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              {mode === 'create' ? 'Créer' : 'Modifier'}
-            </button>
-          </div>
-        </form>
-      )}
-    </Modal>
+        <div>
+          <label className="block text-sm font-medium mb-1">Animateur BAFM</label>
+          <select
+            name="instructorId"
+            value={formData.instructorId}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="" disabled>Sélectionnez un animateur</option>
+            {instructorList.map((instructor) => (
+              <option key={instructor.id} value={instructor.id}>
+                {instructor.firstName} {instructor.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Psychologue</label>
+          <select
+            name="psychologueId"
+            value={formData.psychologueId}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="" disabled>Sélectionnez un psychologue</option>
+            {psychologistList.map((psychologist) => (
+              <option key={psychologist.id} value={psychologist.id}>
+                {psychologist.firstName} {psychologist.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Date de début</label>
+          <input
+            type="date"
+            name="startDate"
+            value={formData.startDate}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Date de fin</label>
+          <input
+            type="date"
+            name="endDate"
+            value={formData.endDate}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            {mode === "create" ? "Créer" : "Modifier"}
+          </button>
+        </div>
+      </form>
+    
+  </Modal>
+
   );
 };
 
+
 const BackofficeStageList: React.FC = () => {
   const [stages, setStages] = useState<Stage[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     mode: null,
     selectedStage: null
   });
-  
-  const pageSize = 10;
+
+  const pageSize = 6;
 
   const fetchStages = async () => {
     setLoading(true);
@@ -250,90 +357,67 @@ const BackofficeStageList: React.FC = () => {
     fetchStages();
   }, []);
 
-  const handleCreate = async (formData: StageFormData) => {
+  const handleModalSubmit = async (formData: StageFormData) => {
     try {
-      const response = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      if (response.ok) {
-        fetchStages();
-        closeModal();
+      let response;
+      
+      switch (modalState.mode) {
+        case 'create':
+          response = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+          });
+          break;
+          
+        case 'edit':
+          if (!modalState.selectedStage?.id) throw new Error("ID manquant");
+          response = await fetch(`/api/sessions/${modalState.selectedStage.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...formData, id: modalState.selectedStage.id })
+          });
+          break;
+          
+        case 'delete':
+          if (!modalState.selectedStage?.id) throw new Error("ID manquant");
+          response = await fetch(`/api/sessions/${modalState.selectedStage.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          break;
+          
+        default:
+          throw new Error("Mode d'opération invalide");
       }
-    } catch (error) {
-      console.error('Erreur lors de la création:', error);
-    }
-  };
 
-  const handleEdit = async (formData: StageFormData) => {
-    try {
-      const response = await fetch(`/api/sessions/${modalState.selectedStage?.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      if (response.ok) {
-        fetchStages();
-        closeModal();
-      }
+      if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+      
+      await fetchStages();
+      closeModal();
+      
     } catch (error) {
-      console.error('Erreur lors de la modification:', error);
-    }
-  };
-
-  const handleDelete = async (formData: StageFormData) => {
-    try {
-      const response = await fetch(`/api/sessions/${modalState.selectedStage?.id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        fetchStages();
-        closeModal();
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-    }
-  };
-
-  const handleModalSubmit = (formData: StageFormData) => {
-    switch (modalState.mode) {
-      case 'create':
-        handleCreate(formData);
-        break;
-      case 'edit':
-        handleEdit(formData);
-        break;
-      case 'delete':
-        handleDelete(formData);
-        break;
+      console.error('Erreur:', error);
+      alert("Une erreur s'est produite lors de l'opération.");
     }
   };
 
   const openModal = (mode: 'create' | 'edit' | 'delete', stage: Stage | null = null) => {
-    setModalState({
-      isOpen: true,
-      mode,
-      selectedStage: stage
-    });
+    setModalState({ isOpen: true, mode, selectedStage: stage });
   };
 
   const closeModal = () => {
-    setModalState({
-      isOpen: false,
-      mode: null,
-      selectedStage: null
-    });
+    setModalState({ isOpen: false, mode: null, selectedStage: null });
   };
 
   const totalPages = Math.ceil(stages.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedStages = stages.slice(startIndex, startIndex + pageSize);
 
+  if (!Array.isArray(paginatedStages)) {
+    console.error('paginatedStages n\'est pas un tableau:', paginatedStages);
+    return null;
+  }
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage((prev) => prev + 1);
@@ -358,58 +442,81 @@ const BackofficeStageList: React.FC = () => {
           Nouveau Stage
         </button>
       </div>
-
+  
       {loading ? (
         <p>Chargement des données...</p>
       ) : (
         <>
-          <ul className="divide-y divide-gray-200">
-            {paginatedStages.map((stage) => (
-              <li key={stage.id} className="py-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-gray-800">
-                      {stage.numeroStageAnts} - {stage.location}
-                    </p>
-                    <p className="text-gray-600">
-                      Du {new Date(stage.startDate).toLocaleDateString()} au{" "}
-                      {new Date(stage.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right mr-4">
-                      <p className="font-bold text-green-600">
-                        {stage.price.toLocaleString("fr-FR", {
-                          style: "currency",
-                          currency: "EUR",
-                        })}
+          {paginatedStages.length > 0 ? (
+            <ul className="divide-y divide-gray-200">
+              {paginatedStages.map((stage, index) => (
+                <li 
+                  key={`${stage.id}-${index}`} 
+                  className={`py-4 ${stage.isArchived ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-gray-800">
+                        {stage.numeroStageAnts} - Du {new Date(stage.startDate).toLocaleDateString()} au{" "}
+                        {new Date(stage.endDate).toLocaleDateString()}
+                        {stage.isArchived && (
+                          <span className="ml-2 text-sm text-gray-500">(Archivé)</span>
+                        )}
                       </p>
-                      <p className={`font-semibold ${
-                        stage.capacity <= 5 ? "text-red-500" : "text-gray-800"
-                      }`}>
-                        Places restantes: {stage.capacity}
+                      
+                      <p className="text-gray-600 mt-1">
+                        <span className="font-semibold">BAFM : </span>
+                        {stage.instructor
+                          ? `${stage.instructor.firstName} ${stage.instructor.lastName}`
+                          : "Aucun instructeur"}
+                      </p>
+                      <p className="text-gray-600 mt-1">
+                        <span className="font-semibold">Psychologue : </span>
+                        {stage.psychologue
+                          ? `${stage.psychologue.firstName} ${stage.psychologue.lastName} `
+                          : "Aucun psychologue"}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => openModal('edit', stage)}
-                        className="p-2 text-gray-600 hover:text-blue-600"
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openModal('delete', stage)}
-                        className="p-2 text-gray-600 hover:text-red-600"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right mr-4">
+                        <p className="font-bold text-green-600">
+                          {stage.price.toLocaleString("fr-FR", {
+                            style: "currency",
+                            currency: "EUR",
+                          })}
+                        </p>
+                        <p
+                          className={`font-semibold ${
+                            stage.capacity <= 5 ? "text-red-500" : "text-gray-800"
+                          }`}
+                        >
+                          Places restantes: {stage.capacity}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => openModal("edit", stage)}
+                          className="p-2 text-gray-600 hover:text-blue-600"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openModal("delete", stage)}
+                          className="p-2 text-gray-600 hover:text-red-600"
+                          title="Archiver"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Aucun stage trouvé.</p>
+          )}
+          
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button
               onClick={handlePrevPage}
@@ -439,7 +546,7 @@ const BackofficeStageList: React.FC = () => {
           </div>
         </>
       )}
-
+  
       <StageModal
         isOpen={modalState.isOpen}
         onClose={closeModal}
@@ -452,3 +559,4 @@ const BackofficeStageList: React.FC = () => {
 };
 
 export default BackofficeStageList;
+

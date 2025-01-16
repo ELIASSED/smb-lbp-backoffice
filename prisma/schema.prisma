@@ -15,21 +15,22 @@ datasource db {
 }
 
 model Relance {
-  id        Int      @id @default(autoincrement())
-  email     String
-  firstName String
-  lastName  String
-  phone     String
-  userId    Int
-  sessionId Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  email         String
+  firstName     String
+  lastName      String
+  phone         String
+  userId        Int
+  lastSessionId Int?     // nullable
+  profession    String?  // nullable
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   user      User     @relation(fields: [userId], references: [id])
-  session   Session  @relation(fields: [sessionId], references: [id])
+  session   Session? @relation(fields: [lastSessionId], references: [id]) // session is now optional
 
-  @@unique([userId, sessionId])
+  @@unique([userId, lastSessionId])
 }
 
 
@@ -132,7 +133,7 @@ model Psychologue {
   isArchived      Boolean      @default(false) 
   // Relations
   sessions  Session[]
-}
+}      
 
 
 model Payment {
