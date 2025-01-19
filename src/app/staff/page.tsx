@@ -1,219 +1,32 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PencilIcon, PlusCircleIcon, TrashIcon } from "lucide-react";
+import { PlusCircleIcon } from "lucide-react";
 
-// Types
-interface Staff {
-  id: string;
-  firstName: string;
-  lastName: string;
-  numeroAutorisationPrefectorale: string;
-  email: string;
-  phone: string;
-}
+import {
+  getInstructors,
+  getPsychologists,
+  createStaff,
+  updateStaff,
+  archiveStaff,
+  Staff,
+  StaffType,
+} from "@/services/staffApi";
 
-type StaffType = "instructor" | "psychologist";
-type ModalMode = "create" | "edit" | "delete";
+import { Modal } from "../../components/StaffModal";
+import { StaffListItem } from "@/components/StaffListItem";
+import { StaffForm, ModalMode, StaffFormData } from "../../components/StaffForm";
 
-interface StaffFormData {
-  firstName: string;
-  lastName: string;
-  numeroAutorisationPrefectorale: string;
-  email: string;
-  phone: string;
-}
-
+/** Structure du state pour la modale */
 interface ModalState {
   isOpen: boolean;
-  mode: ModalMode | null;
+  mode: "create" | "edit" | "delete" | null;
   selectedStaff: Staff | null;
   staffType: StaffType | null;
 }
 
-// Modal Component
-const Modal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  title: string;
-}> = ({ isOpen, onClose, children, title }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-};
-
-// Staff List Item Component
-const StaffListItem: React.FC<{
-  staff: Staff;
-  onEdit: () => void;
-  onDelete: () => void;
-}> = ({ staff, onEdit, onDelete }) => (
-  <li className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-    <div className="flex justify-between items-start">
-      <div className="space-y-1">
-        <div className="font-semibold text-gray-900">
-          {staff.firstName} {staff.lastName}
-        </div>
-        <div className="text-sm text-gray-600">
-          Numéro Agrément Ants: {staff.numeroAutorisationPrefectorale}
-        </div>
-        <div className="text-sm text-gray-600">Email: {staff.email}</div>
-        <div className="text-sm text-gray-600">Téléphone: {staff.phone}</div>
-      </div>
-      <div className="flex space-x-2">
-        <button
-          onClick={onEdit}
-          className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-          aria-label="Modifier"
-        >
-          <PencilIcon className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onDelete}
-          className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-          aria-label="Supprimer"
-        >
-          <TrashIcon className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  </li>
-);
-
-// Staff Form Component
-const StaffForm: React.FC<{
-  initialData?: Staff;
-  onSubmit: (data: StaffFormData) => void;
-  onCancel: () => void;
-  mode: ModalMode;
-}> = ({ initialData, onSubmit, onCancel, mode }) => {
-  const [formData, setFormData] = useState<StaffFormData>({
-    firstName: initialData?.firstName || "",
-    lastName: initialData?.lastName || "",
-    numeroAutorisationPrefectorale: initialData?.numeroAutorisationPrefectorale || "",
-    email: initialData?.email || "",
-    phone: initialData?.phone || "",
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Prénom
-        </label>
-        <input
-          type="text"
-          name="firstName"
-          value={formData.firstName}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nom
-        </label>
-        <input
-          type="text"
-          name="lastName"
-          value={formData.lastName}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Numéro Agrément Ants
-        </label>
-        <input
-          type="text"
-          name="numeroAutorisationPrefectorale"
-          value={formData.numeroAutorisationPrefectorale}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Téléphone
-        </label>
-        <input
-          type="tel"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      <div className="flex justify-end gap-3 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-        >
-          Annuler
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          {mode === "create" ? "Créer" : "Modifier"}
-        </button>
-      </div>
-    </form>
-  );
-};
-
-// Main Page Component
 const StaffPage: React.FC = () => {
+  // État global : instructeurs et psychologues
   const [staffData, setStaffData] = useState<{
     instructors: Staff[];
     psychologists: Staff[];
@@ -221,8 +34,12 @@ const StaffPage: React.FC = () => {
     instructors: [],
     psychologists: [],
   });
+
+  // Loading & Error
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // État de la modale
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     mode: null,
@@ -230,22 +47,16 @@ const StaffPage: React.FC = () => {
     staffType: null,
   });
 
+  /** Récupération des données depuis l'API */
   const fetchStaffData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [instructorsRes, psychologistsRes] = await Promise.all([
-        fetch("/api/animateurs"),
-        fetch("/api/psychologues"),
+      // Récupère instructeurs et psychologues en parallèle
+      const [instructors, psychologists] = await Promise.all([
+        getInstructors(),
+        getPsychologists(),
       ]);
-
-      if (!instructorsRes.ok || !psychologistsRes.ok) {
-        throw new Error("Erreur lors de la récupération des données");
-      }
-
-      const instructors = await instructorsRes.json();
-      const psychologists = await psychologistsRes.json();
-
       setStaffData({ instructors, psychologists });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
@@ -258,64 +69,42 @@ const StaffPage: React.FC = () => {
     fetchStaffData();
   }, []);
 
+  /** Gère la création, modification, suppression/archivage */
   const handleStaffOperation = async (
     operation: "create" | "edit" | "archive",
     staffType: StaffType,
     data?: StaffFormData
-) => {
+  ) => {
     try {
-        const baseUrl =
-            staffType === "instructor"
-                ? "/api/animateurs"
-                : "/api/psychologues";
+      if (!staffType) throw new Error("Type de staff manquant");
 
-        let url = baseUrl;
-        let config: RequestInit = {
-            headers: { "Content-Type": "application/json" },
-        };
+      if ((operation === "edit" || operation === "archive") && !modalState.selectedStaff?.id) {
+        throw new Error("ID manquant pour l'opération");
+      }
 
-        if (operation === "edit" || operation === "archive") {
-            if (!modalState.selectedStaff?.id) {
-                throw new Error("ID manquant");
-            }
-            url = `${baseUrl}/${modalState.selectedStaff.id}`;
-        }
+      if (operation === "create" && data) {
+        await createStaff(staffType, data);
+      }
 
-        switch (operation) {
-            case "create":
-                config.method = "POST";
-                config.body = JSON.stringify(data);
-                break;
-            case "edit":
-                config.method = "PUT";
-                config.body = JSON.stringify(data);
-                break;
-            case "archive":
-                config.method = "PUT";
-                config.body = JSON.stringify({ isArchived: true });
-                break;
-        }
+      if (operation === "edit" && data && modalState.selectedStaff) {
+        await updateStaff(staffType, modalState.selectedStaff.id, data);
+      }
 
-        const response = await fetch(url, config);
+      if (operation === "archive" && modalState.selectedStaff) {
+        await archiveStaff(staffType, modalState.selectedStaff.id);
+      }
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Erreur lors de l'opération");
-        }
-
-        alert("Opération réussie !");
-        await fetchStaffData();
-        closeModal();
+      alert("Opération réussie !");
+      await fetchStaffData();
+      closeModal();
     } catch (err) {
-        console.error(err);
-        alert(err instanceof Error ? err.message : "Erreur inconnue");
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Erreur inconnue");
     }
-};
+  };
 
-
-
-
-  const openModal = (mode: ModalMode, staffType: StaffType, staff?: Staff) => {
+  /** Ouvre la modale */
+  const openModal = (mode: "create" | "edit" | "delete", staffType: StaffType, staff?: Staff) => {
     setModalState({
       isOpen: true,
       mode,
@@ -324,6 +113,7 @@ const StaffPage: React.FC = () => {
     });
   };
 
+  /** Ferme la modale */
   const closeModal = () => {
     setModalState({
       isOpen: false,
@@ -333,6 +123,7 @@ const StaffPage: React.FC = () => {
     });
   };
 
+  /** Rendu d'une section (Instructeurs ou Psychologues) */
   const renderStaffSection = (
     title: string,
     staffType: StaffType,
@@ -346,7 +137,9 @@ const StaffPage: React.FC = () => {
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           <PlusCircleIcon className="w-5 h-5 mr-2" />
-          {`Nouveau ${staffType === "instructor" ? "instructeur" : "psychologue"}`}
+          {`Nouveau ${
+            staffType === "instructor" ? "instructeur" : "psychologue"
+          }`}
         </button>
       </div>
 
@@ -371,22 +164,28 @@ const StaffPage: React.FC = () => {
     </section>
   );
 
+  /** Rendu de la modale */
   const renderModal = () => {
     if (!modalState.isOpen || !modalState.mode || !modalState.staffType) return null;
 
     const staffTypeLabel =
       modalState.staffType === "instructor" ? "instructeur" : "psychologue";
-    const title = {
+
+    const titleMap: Record<"create" | "edit" | "delete", string> = {
       create: `Ajouter un ${staffTypeLabel}`,
       edit: `Modifier le ${staffTypeLabel}`,
       delete: `Supprimer le ${staffTypeLabel}`,
-    }[modalState.mode];
+    };
 
-    return (
-      <Modal isOpen={modalState.isOpen} onClose={closeModal} title={title}>
-        {modalState.mode === "delete" ? (
+    const title = titleMap[modalState.mode];
+
+    if (modalState.mode === "delete") {
+      return (
+        <Modal isOpen={modalState.isOpen} onClose={closeModal} title={title}>
           <div>
-            <p className="mb-4">{`Êtes-vous sûr de vouloir supprimer ce ${staffTypeLabel} ?`}</p>
+            <p className="mb-4">
+              {`Êtes-vous sûr de vouloir supprimer ce ${staffTypeLabel} ?`}
+            </p>
             <p className="font-medium mb-6">
               {modalState.selectedStaff?.firstName} {modalState.selectedStaff?.lastName}
             </p>
@@ -398,32 +197,39 @@ const StaffPage: React.FC = () => {
                 Annuler
               </button>
               <button
-    onClick={() => handleStaffOperation("archive", modalState.staffType!)}
-    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
->
-    Archiver
-</button>
-
+                onClick={() =>
+                  handleStaffOperation("archive", modalState.staffType!)
+                }
+                className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+              >
+                Archiver
+              </button>
             </div>
           </div>
-        ) : (
-          <StaffForm
-            initialData={modalState.selectedStaff || undefined}
-            onSubmit={(data) =>
-              handleStaffOperation(
-                modalState.mode as "create" | "edit",
-                modalState.staffType!,
-                data
-              )
-            }
-            onCancel={closeModal}
-            mode={modalState.mode}
-          />
-        )}
+        </Modal>
+      );
+    }
+
+    // Sinon, "create" ou "edit"
+    return (
+      <Modal isOpen={modalState.isOpen} onClose={closeModal} title={title}>
+        <StaffForm
+          initialData={modalState.selectedStaff || undefined}
+          mode={modalState.mode}
+          onSubmit={(data) =>
+            handleStaffOperation(
+              modalState.mode === "create" ? "create" : "edit",
+              modalState.staffType!,
+              data
+            )
+          }
+          onCancel={closeModal}
+        />
       </Modal>
     );
   };
 
+  // Affichage principal
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -442,7 +248,7 @@ const StaffPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Gestion des Animateurs et Psychologues</h2>
+      <h2 className="text-2xl font-semibold mb-6">Gestion des Animateurs</h2>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="space-y-8">
           {renderStaffSection(
@@ -456,6 +262,7 @@ const StaffPage: React.FC = () => {
             staffData.psychologists
           )}
         </div>
+
         {renderModal()}
       </div>
     </div>

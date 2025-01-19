@@ -1,10 +1,11 @@
+// prisma/seed.ts (or seed.js)
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("Seeding database...");
 
-  // Créer des instructeurs
+  // 1. Create instructors
   const instructor1 = await prisma.instructor.create({
     data: {
       email: "instructor1@example.com",
@@ -13,7 +14,6 @@ async function main() {
       phone: "01 23 45 67 89",
       numeroAutorisationPrefectorale:"B7543986745",    
       isArchived: false,
-
     },
   });
 
@@ -28,7 +28,7 @@ async function main() {
     },
   });
 
-  // Créer des psychologues
+  // 2. Create psychologues
   const psychologue1 = await prisma.psychologue.create({
     data: {
       email: "psychologue1@example.com",
@@ -46,13 +46,12 @@ async function main() {
       firstName: "Albert",
       lastName: "Einstein",
       phone: "01 73 44 67 19",
-      numeroAutorisationPrefectorale:"B7523409745",      
+      numeroAutorisationPrefectorale:"B7523409745",
       isArchived: false,
-
     },
   });
 
-  // Générer des sessions dynamiquement : 8 par mois pendant un an
+  // 3. Generate sessions dynamically: 8 per month for one year
   const startDate = new Date("2025-01-01T09:00:00Z");
   const endDate = new Date("2025-12-31T17:00:00Z");
   const sessions = [];
@@ -60,24 +59,24 @@ async function main() {
   let sessionNumber = 1;
 
   for (let month = 0; month < 12; month++) {
-    for (let session = 0; session < 8; session++) {
+    for (let s = 0; s < 8; s++) {
       const start = new Date(startDate);
       start.setMonth(startDate.getMonth() + month);
-      start.setDate(session * 3 + 1); // Espacement de 3 jours entre chaque stage
+      start.setDate(s * 3 + 1); // space of 3 days between each stage
 
       const end = new Date(start);
-      end.setDate(start.getDate() + 1); // Durée de 2 jours pour chaque stage
+      end.setDate(start.getDate() + 1); // 2-day stage
 
       sessions.push({
         numeroStageAnts: `R0060040934${String(sessionNumber).padStart(3, "0")}`,
-        price: 200 + session * 10, // Prix variable
+        price: 200 + s * 10, // variable price
         description: "Stage de récupération de points",
         startDate: start,
         endDate: end,
         location: "Saint-Maur-des-Fossés",
-        capacity: 15 - (session % 5), // Capacité variable
-        instructorId: session % 2 === 0 ? instructor1.id : instructor2.id,
-        psychologueId: session % 2 === 0 ? psychologue1.id : psychologue2.id,
+        capacity: 15 - (s % 5), // variable capacity
+        instructorId: s % 2 === 0 ? instructor1.id : instructor2.id,
+        psychologueId: s % 2 === 0 ? psychologue1.id : psychologue2.id,
       });
 
       sessionNumber++;
@@ -86,7 +85,7 @@ async function main() {
 
   await prisma.session.createMany({ data: sessions });
 
-  // Créer un utilisateur
+  // 4. Create a user (including driving license fields)
   const user = await prisma.user.create({
     data: {
       civilite: "Monsieur",
@@ -101,19 +100,23 @@ async function main() {
       nationalite: "Française",
       dateNaissance: new Date("1990-01-01"),
       codePostalNaissance: "75001",
-    },
-  });
 
-  // Associer l'utilisateur à une session
-  await prisma.sessionUsers.create({
-    data: {
-      sessionId: 1, // Assurez-vous que l'ID correspond à une session existante
-      userId: user.id,
+      // Driving license fields that are now in the User model
       numeroPermis: "123456789",
       dateDelivrancePermis: new Date("2015-06-01"),
       prefecture: "Paris",
       etatPermis: "Valide",
       casStage: "Volontaire",
+    },
+  });
+
+  // 5. Link user to a session via SessionUsers
+  // Note: sessionUsers no longer includes driving license fields
+  await prisma.sessionUsers.create({
+    data: {
+      sessionId: 1, // an ID that exists
+      userId: user.id,
+      // isArchived: false, // or any other optional field from your SessionUsers model
     },
   });
 
@@ -128,5 +131,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-  
