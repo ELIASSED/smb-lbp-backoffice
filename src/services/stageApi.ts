@@ -71,13 +71,24 @@ export async function createSession(formData: StageFormData): Promise<any> {
 // ----- Mise à jour d'une session -----
 export async function updateSession(id: number, formData: StageFormData): Promise<any> {
   const response = await fetch(`/api/sessions/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...formData, id }),
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id,
+      numeroStageAnts: formData.numeroStageAnts,
+      location: formData.location,
+      price: Number(formData.price), // Convertir en nombre
+      capacity: Number(formData.capacity), // Convertir en nombre
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      instructorId: formData.instructorId,
+      psychologueId: formData.psychologueId,
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(`Erreur HTTP: ${response.status}`);
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
   }
   return response.json();
 }

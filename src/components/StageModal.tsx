@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import {
   Stage,
   StageFormData,
+  createSession,
   getInstructors,
   getPsychologists,
+  updateSession,
 } from "../services/stageApi";
 
 // ----- Composant générique Modal -----
@@ -127,9 +129,22 @@ export const StageModal: React.FC<StageModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    try {
+      if (mode === "edit" && stage?.id) {
+        await updateSession(stage.id, formData); // Appel à updateSession
+        onSubmit(formData); // Callback pour informer le parent
+        onClose(); // Fermer la modale après succès
+      } else if (mode === "create") {
+        await createSession(formData);
+        onSubmit(formData);
+        onClose();
+      }
+    } catch (error) {
+      console.error("Erreur lors de la soumission:", error);
+      alert("Une erreur est survenue. Vérifiez les données et réessayez.");
+    }
   };
 
   // Mode "delete": on affiche seulement la confirmation
@@ -192,7 +207,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
-            required
           />
         </div>
 
@@ -200,7 +214,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Prix</label>
           <input
             type="number"
-            step="0.01"
+
             name="price"
             value={formData.price}
             onChange={handleChange}

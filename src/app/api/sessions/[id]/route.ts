@@ -7,35 +7,55 @@ const prisma = new PrismaClient();
 // PUT: Modifier une session existante
 export async function PUT(request: Request) {
   try {
-    const { id, numeroStageAnts, location, price, capacity, startDate, endDate, instructor, psychologue } = await request.json();
+    const {
+      id,
+      numeroStageAnts,
+      location,
+      price,
+      capacity,
+      startDate,
+      endDate,
+      instructorId, // Changement ici : utiliser instructorId
+      psychologueId // Changement ici : utiliser psychologueId
+    } = await request.json();
 
     // Validation des données
-    if (!id || !numeroStageAnts || !location || typeof price !== 'number' || !capacity || !startDate || !endDate || !instructor || !psychologue) {
+    if (
+      !id ||
+      !numeroStageAnts ||
+      !location ||
+      typeof price !== "number" ||
+      !capacity ||
+      !startDate ||
+      !endDate ||
+      !instructorId ||
+      !psychologueId
+    ) {
       return NextResponse.json(
-        { error: 'Tous les champs obligatoires doivent être remplis et valides.' },
+        { error: "Tous les champs obligatoires doivent être remplis et valides." },
         { status: 400 }
       );
     }
 
     const updatedSession = await prisma.session.update({
-      where: { id },
+      where: { id: Number(id) }, // Assure-toi que id est un nombre
       data: {
         numeroStageAnts,
         location,
-        price: Math.round(price), // Arrondi le prix à l'entier le plus proche
+        price: Math.round(price),
         capacity,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        instructor,
-        psychologue,
+        instructor: { connect: { id: Number(instructorId) } }, // Relation avec instructor
+        psychologue: { connect: { id: Number(psychologueId) } }, // Relation avec psychologue
       },
     });
 
     return NextResponse.json(updatedSession, { status: 200 });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la session:', error);
+    console.error("Erreur lors de la mise à jour de la session:", error);
     return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la mise à jour de la session.' },
+      { error: "Une erreur est survenue lors de la mise à jour de la session." },
       { status: 500 }
     );
   } finally {
