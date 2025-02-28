@@ -3,55 +3,87 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { FaBars, FaTimes, FaChalkboardTeacher, FaUsers, FaClipboardList } from "react-icons/fa";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="bg-yellow-600 text-white shadow fixed top-0 left-0 w-64 h-full flex flex-col items-start p-8">
-      {/* Logo et Titre */}
-      <div className="flex items-center mb-8">
-        {/* Lien autour de l'image pour rediriger vers la page d'accueil */}
-        <Link href="/" className="flex items-center">
+    <>
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex bg-yellow w-64 h-screen fixed top-0 left-0 flex-col items-center p-6 shadow-lg">
+        {/* Logo */}
+        <Link href="/" className="mb-8">
           <Image
             src="/smblogo.png"
-            width={100}
-            height={50}
-            alt="Exemple Banner"
+            width={120}
+            height={60}
+            alt="SMB Logo"
             className="h-20 w-auto"
           />
         </Link>
-      </div>
 
-      {/* Navigation verticale */}
-      <nav className="flex flex-col space-y-4 w-full">
-        <Link
-          href="/sessions"
-          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
-        >
-          Sessions
-        </Link>
-        <Link
-          href="/staff"
-          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
-        >
-          Staff
-        </Link>
-        <Link
-          href="/inscriptions"
-          className="text-base uppercase hover:text-gray-200 py-2 px-4 rounded hover:bg-yellow-700"
-        >
-          Inscriptions
-        </Link>
-      </nav>
+        {/* Navigation Desktop */}
+        <nav className="flex flex-col space-y-6 w-full">
+          <NavItem href="/sessions" icon={<FaChalkboardTeacher />} label="Sessions" />
+          <NavItem href="/staff" icon={<FaUsers />} label="Staff" />
+          <NavItem href="/inscriptions" icon={<FaClipboardList />} label="Inscriptions" />
+        </nav>
+      </aside>
 
-      {/* Bouton pour le menu mobile */}
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        className="md:hidden bg-white text-gray-800 p-2 rounded focus:outline-none mt-auto"
+      {/* Navbar Mobile */}
+      <header className="md:hidden bg-yellow fixed top-0 w-full p-4 flex items-center justify-between shadow-lg z-50">
+        <Link href="/" className="flex items-center">
+          <Image src="/smblogo.png" width={80} height={40} alt="SMB Logo" className="h-12 w-auto" />
+        </Link>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="text-white text-2xl focus:outline-none"
+        >
+          {menuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+      </header>
+
+      {/* Menu Mobile */}
+      <div
+        className={`md:hidden fixed top-0 left-0 w-64 h-full bg-yellow shadow-lg transform transition-transform duration-300 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        {menuOpen ? "Fermer" : "Menu"}
-      </button>
-    </header>
+        {/* Bouton Fermer */}
+        <button
+          onClick={() => setMenuOpen(false)}
+          className="absolute top-4 right-4 text-white text-2xl"
+        >
+          <FaTimes />
+        </button>
+
+        {/* Logo */}
+        <div className="flex justify-center mt-8 mb-6">
+          <Link href="/" onClick={() => setMenuOpen(false)}>
+            <Image src="/smblogo.png" width={100} height={50} alt="SMB Logo" className="h-16 w-auto" />
+          </Link>
+        </div>
+
+        {/* Navigation Mobile */}
+        <nav className="flex flex-col space-y-6 w-full px-6">
+          <NavItem href="/sessions" icon={<FaChalkboardTeacher />} label="Sessions" onClick={() => setMenuOpen(false)} />
+          <NavItem href="/staff" icon={<FaUsers />} label="Staff" onClick={() => setMenuOpen(false)} />
+          <NavItem href="/inscriptions" icon={<FaClipboardList />} label="Inscriptions" onClick={() => setMenuOpen(false)} />
+        </nav>
+      </div>
+    </>
   );
 }
+
+// Composant pour les liens de navigation
+const NavItem = ({ href, icon, label, onClick }: { href: string; icon: JSX.Element; label: string; onClick?: () => void }) => (
+  <Link
+    href={href}
+    onClick={onClick}
+    className="flex items-center space-x-3 text-lg font-semibold text-gray-dark px-4 py-3 rounded-lg hover:bg-yellow-dark hover:text-white transition duration-300"
+  >
+    <span className="text-xl">{icon}</span>
+    <span>{label}</span>
+  </Link>
+);

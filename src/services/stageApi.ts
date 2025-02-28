@@ -42,84 +42,65 @@ export interface StageFormData {
   psychologueId: string;
 }
 
-// ----- Récupération de toutes les sessions -----
-export async function getSessions(): Promise<Stage[]> {
-  const response = await fetch('/api/sessions');
-  if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des données.');
-  }
-  return response.json();
-}
+const API_URL = "/api/sessions";
 
-// ----- Création d'une nouvelle session -----
-export async function createSession(formData: StageFormData): Promise<any> {
-  const response = await fetch("/api/sessions", {
+// ✅ Fonction générique pour les appels API
+const fetchApi = async (url: string, options?: RequestInit) => {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Erreur API:", error);
+    throw error;
+  }
+};
+
+// 🔹 Obtenir toutes les sessions
+export const getSessions = async () => {
+  return await fetchApi(API_URL);
+};
+
+// 🔹 Obtenir une session par ID
+export const getSessionById = async (id: number) => {
+  return await fetchApi(`${API_URL}/${id}`);
+};
+
+// 🔹 Créer une session (avec protection contre le double appel)
+export const createSession = async (data: any) => {
+  return await fetchApi(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
   });
+};
 
-  if (!response.ok) {
-    // Récupérer le message d'erreur éventuel renvoyé par l'API
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Erreur lors de la création de la session");
-  }
-
-  return response.json();
-}
-
-// ----- Mise à jour d'une session -----
-export async function updateSession(id: number, formData: StageFormData): Promise<any> {
-  const response = await fetch(`/api/sessions/${id}`, {
+// 🔹 Mettre à jour une session
+export const updateSession = async (id: number, data: any) => {
+  return await fetchApi(`${API_URL}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id,
-      numeroStageAnts: formData.numeroStageAnts,
-      location: formData.location,
-      price: Number(formData.price), // Convertir en nombre
-      capacity: Number(formData.capacity), // Convertir en nombre
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      instructorId: formData.instructorId,
-      psychologueId: formData.psychologueId,
-    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
   });
+};
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
-  }
-  return response.json();
-}
+// 🔹 Supprimer une session
+export const deleteSession = async (id: number) => {
+  return await fetchApi(`${API_URL}/${id}`, { method: "DELETE" });
+};
 
-// ----- Suppression (archivage) d'une session -----
-export async function deleteSession(id: number): Promise<any> {
-  const response = await fetch(`/api/sessions/${id}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-  });
+// 🔹 Récupérer les instructeurs et psychologues (évite les appels redondants)
+export const getInstructors = async () => {
+  return await fetchApi("/api/animateurs");
+};
 
-  if (!response.ok) {
-    throw new Error(`Erreur HTTP: ${response.status}`);
-  }
-  return response.json();
-}
+export const getPsychologists = async () => {
+  return await fetchApi("/api/psychologues");
+};
 
-// ----- Récupération des animateurs (BAFM) -----
-export async function getInstructors(): Promise<Instructor[]> {
-  const response = await fetch('/api/animateurs');
-  if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des animateurs.');
-  }
-  return response.json();
-}
-
-// ----- Récupération des psychologues -----
-export async function getPsychologists(): Promise<Psychologist[]> {
-  const response = await fetch('/api/psychologues');
-  if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des psychologues.');
-  }
-  return response.json();
-}

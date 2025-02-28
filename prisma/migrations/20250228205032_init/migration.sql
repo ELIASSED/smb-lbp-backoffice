@@ -31,10 +31,11 @@ CREATE TABLE "User" (
     "dateNaissance" TIMESTAMP(3) NOT NULL,
     "codePostalNaissance" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "relanceCount" INTEGER NOT NULL DEFAULT 0,
-    "lastRelanceAt" TIMESTAMP(3),
-    "imageScan1" TEXT,
-    "imageScan2" TEXT,
+    "numeroPermis" TEXT NOT NULL,
+    "dateDelivrancePermis" TIMESTAMP(3) NOT NULL,
+    "prefecture" TEXT NOT NULL,
+    "etatPermis" TEXT NOT NULL,
+    "casStage" TEXT NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -44,13 +45,10 @@ CREATE TABLE "SessionUsers" (
     "id" SERIAL NOT NULL,
     "sessionId" INTEGER NOT NULL,
     "userId" INTEGER NOT NULL,
-    "numeroPermis" TEXT NOT NULL,
-    "dateDelivrancePermis" TIMESTAMP(3) NOT NULL,
-    "prefecture" TEXT NOT NULL,
-    "etatPermis" TEXT NOT NULL,
-    "casStage" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "isArchived" BOOLEAN NOT NULL DEFAULT false,
+    "isPaid" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "SessionUsers_pkey" PRIMARY KEY ("id")
 );
@@ -107,7 +105,7 @@ CREATE TABLE "Psychologue" (
 -- CreateTable
 CREATE TABLE "Payment" (
     "id" SERIAL NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "sessionUserId" INTEGER NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
     "method" TEXT NOT NULL,
     "paidAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -117,9 +115,6 @@ CREATE TABLE "Payment" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Relance_userId_lastSessionId_key" ON "Relance"("userId", "lastSessionId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SessionUsers_sessionId_userId_key" ON "SessionUsers"("sessionId", "userId");
@@ -149,4 +144,4 @@ ALTER TABLE "Session" ADD CONSTRAINT "Session_instructorId_fkey" FOREIGN KEY ("i
 ALTER TABLE "Session" ADD CONSTRAINT "Session_psychologueId_fkey" FOREIGN KEY ("psychologueId") REFERENCES "Psychologue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_sessionUserId_fkey" FOREIGN KEY ("sessionUserId") REFERENCES "SessionUsers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

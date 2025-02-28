@@ -5,8 +5,10 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   try {
-    // Récupérer toutes les inscriptions utilisateur avec les informations nécessaires
     const sessionUsers = await prisma.sessionUsers.findMany({
+      where: {
+        session: { isArchived: false },
+      },
       include: {
         user: {
           select: {
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
             nom: true,
             prenom: true,
             email: true,
-            numeroPermis: true, // Champs spécifiques de l'utilisateur
+            numeroPermis: true,
             dateDelivrancePermis: true,
             prefecture: true,
             etatPermis: true,
@@ -31,12 +33,10 @@ export async function GET(request: Request) {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc', // Trier par la date de création
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(sessionUsers); // Retourner les inscriptions avec les données liées
+    return NextResponse.json(sessionUsers);
   } catch (error) {
     console.error("Erreur lors de la récupération des inscriptions utilisateur:", error);
     return NextResponse.json(
@@ -51,52 +51,53 @@ export async function GET(request: Request) {
 
 // POST: Créer une nouvelle inscription (SessionUser)
 export async function POST(request: Request) {
-  try {
-    const data = await request.json();
-    const {
-      numeroPermis,
-      dateDelivrancePermis,
-      prefecture,
-      etatPermis,
-      casStage,
-      sessionId,
-      userId,
-    } = data;
+  const {
+    civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
+    nationalite, dateNaissance, codePostalNaissance, numeroPermis,
+    dateDelivrancePermis, prefecture, etatPermis, casStage, sessionId
+  } = await request.json();
 
-    // Validation des données requises
-    if (!numeroPermis || !dateDelivrancePermis || !prefecture || !etatPermis || !casStage || !sessionId || !userId) {
-      return NextResponse.json({ error: 'Tous les champs sont requis.' }, { status: 400 });
-    }
+  const newUser = await prisma.user.create({
+    data: {
+      civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
+      nationalite, dateNaissance: new Date(dateNaissance), codePostalNaissance,
+      numeroPermis, dateDelivrancePermis: new Date(dateDelivrancePermis),
+      prefecture, etatPermis, casStage
+    },
+  });
 
-    // Vérification des relations
-    const session = await prisma.session.findUnique({ where: { id: Number(sessionId) } });
-    if (!session) {
-      return NextResponse.json({ error: "Session introuvable." }, { status: 404 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
-    if (!user) {
-      return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
-    }
-
-    // Création de l'inscription
-    const newSessionUser = await prisma.sessionUsers.create({
-      data: {
-        numeroPermis,
-        dateDelivrancePermis: new Date(dateDelivrancePermis),
-        prefecture,
-        etatPermis,
-        casStage,
-        sessionId: Number(sessionId),
-        userId: Number(userId),
+  const sessionUser = await prisma.sessionUsers.create({
+    data: {
+      sessionId: Number(sessionId), // Assure-toi que sessionId est un nombre
+      userId: newUser.id,
+      isPaid: false,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          nom: true,
+          prenom: true,
+          email: true,
+          telephone: true,
+          numeroPermis: true,
+          dateDelivrancePermis: true,
+          prefecture: true,
+          etatPermis: true,
+          casStage: true,
+        },
       },
-    });
+      session: {
+        select: {
+          id: true,
+          numeroStageAnts: true,
+          location: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+  });
 
-    return NextResponse.json(newSessionUser, { status: 201 });
-  } catch (error) {
-    console.error('Erreur lors de la création de l\'inscription :', error);
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
-  }
+  return NextResponse.json(sessionUser, { status: 201 });
 }

@@ -1,4 +1,3 @@
-// Composant corrigé StageModal.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import {
@@ -10,7 +9,7 @@ import {
   updateSession,
 } from "../services/stageApi";
 
-// ----- Composant générique Modal -----
+// Composant Modal générique
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,10 +25,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
       <div className="bg-white rounded-lg p-6 w-full max-w-lg">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             ✕
           </button>
         </div>
@@ -39,7 +35,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
   );
 };
 
-// ----- Composant StageModal -----
+// Composant StageModal
 interface StageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -70,7 +66,7 @@ export const StageModal: React.FC<StageModalProps> = ({
   const [instructorList, setInstructorList] = useState<any[]>([]);
   const [psychologistList, setPsychologistList] = useState<any[]>([]);
 
-  // Remplir le formulaire si mode Edit ou Delete
+  // Remplissage du formulaire en mode "edit" ou "delete"
   useEffect(() => {
     if (stage && (mode === "edit" || mode === "delete")) {
       setFormData({
@@ -99,7 +95,7 @@ export const StageModal: React.FC<StageModalProps> = ({
     }
   }, [stage, mode]);
 
-  // Aller chercher la liste des animateurs et psychologues
+  // Récupération des listes d'animateurs et de psychologues
   useEffect(() => {
     const fetchStaff = async () => {
       try {
@@ -119,13 +115,19 @@ export const StageModal: React.FC<StageModalProps> = ({
     }
   }, [isOpen]);
 
+  // Gestion des changements dans les inputs
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseFloat(value) : value,
+      [name]:
+        type === "number"
+          ? value === ""
+            ? ""
+            : parseFloat(value)
+          : value,
     }));
   };
 
@@ -133,9 +135,9 @@ export const StageModal: React.FC<StageModalProps> = ({
     e.preventDefault();
     try {
       if (mode === "edit" && stage?.id) {
-        await updateSession(stage.id, formData); // Appel à updateSession
-        onSubmit(formData); // Callback pour informer le parent
-        onClose(); // Fermer la modale après succès
+        await updateSession(stage.id, formData);
+        onSubmit(formData);
+        onClose();
       } else if (mode === "create") {
         await createSession(formData);
         onSubmit(formData);
@@ -147,7 +149,7 @@ export const StageModal: React.FC<StageModalProps> = ({
     }
   };
 
-  // Mode "delete": on affiche seulement la confirmation
+  // Mode "delete": confirmation uniquement
   if (mode === "delete") {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title="Archiver le stage">
@@ -167,7 +169,7 @@ export const StageModal: React.FC<StageModalProps> = ({
     );
   }
 
-  // Mode "create" ou "edit": on affiche le formulaire complet
+  // Mode "create" ou "edit": affichage du formulaire complet
   return (
     <Modal
       isOpen={isOpen}
@@ -180,7 +182,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="text"
             name="numeroStageAnts"
-            value={formData.numeroStageAnts}
+            value={formData.numeroStageAnts || ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -192,7 +194,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="text"
             name="location"
-            value={formData.location}
+            value={formData.location || ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -203,7 +205,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Description</label>
           <textarea
             name="description"
-            value={formData.description}
+            value={formData.description || ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
@@ -214,9 +216,8 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Prix</label>
           <input
             type="number"
-
             name="price"
-            value={formData.price}
+            value={formData.price !== undefined ? formData.price : ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -228,7 +229,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="number"
             name="capacity"
-            value={formData.capacity}
+            value={formData.capacity !== undefined ? formData.capacity : ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             min={1}
@@ -241,7 +242,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Animateur BAFM</label>
           <select
             name="instructorId"
-            value={formData.instructorId}
+            value={formData.instructorId || ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -261,7 +262,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Psychologue</label>
           <select
             name="psychologueId"
-            value={formData.psychologueId}
+            value={formData.psychologueId || ""}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -288,7 +289,6 @@ export const StageModal: React.FC<StageModalProps> = ({
               if (newStartDate) {
                 const nextDay = new Date(newStartDate);
                 nextDay.setDate(nextDay.getDate() + 1);
-
                 setFormData((prev) => ({
                   ...prev,
                   startDate: newStartDate,
@@ -306,7 +306,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="date"
             name="endDate"
-            value={formData.endDate}
+            value={formData.endDate || ""}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             readOnly

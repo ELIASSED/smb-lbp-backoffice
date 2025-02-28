@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+/*  directUrl = env("DIRECT_URL")  */
 }
 
 model Relance {
@@ -38,26 +38,16 @@ model User {
   codePostal          String
   ville               String
   telephone           String
-  email               String       @unique
+  email               String       // Pas de @unique car répétition possible
   nationalite         String
   dateNaissance       DateTime        
   codePostalNaissance String
   createdAt           DateTime     @default(now())
-
-  // Champs pour le suivi des relances
-  relanceCount        Int          @default(0)
-  lastRelanceAt       DateTime?
-
-  // Champs pour les scans d'images confidentielles
-  imageScan1          String?      // URL S3 ou chemin local
-  imageScan2          String?      // URL S3 ou chemin local
-
-  // Champs déplacés depuis SessionUsers
-  numeroPermis         String
+  numeroPermis        String
   dateDelivrancePermis DateTime
-  prefecture           String
-  etatPermis           String
-  casStage             String
+  prefecture          String
+  etatPermis          String
+  casStage            String
 
   // Relations
   sessionUsers SessionUsers[]
@@ -65,19 +55,20 @@ model User {
 }
 
 model SessionUsers {
-  id                   Int          @id @default(autoincrement())
-  sessionId            Int
-  userId               Int
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  isArchived           Boolean      @default(false)
+  id          Int          @id @default(autoincrement())
+  sessionId   Int
+  userId      Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  isArchived  Boolean      @default(false)
+  isPaid      Boolean      @default(false) // Champ ajouté ici
 
   // Relations
-  session   Session      @relation(fields: [sessionId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
-  payments  Payment[]    // New relation to Payment
+  session     Session      @relation(fields: [sessionId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  payments    Payment[]
 
-  @@unique([sessionId, userId]) // Un utilisateur ne peut s'inscrire qu'une fois à une session
+  @@unique([sessionId, userId]) // Unicité par inscription
 }
 
 model Session {
