@@ -16,11 +16,16 @@ export async function GET(request: Request) {
             nom: true,
             prenom: true,
             email: true,
+            telephone: true, // Ajouté pour correspondre au front
             numeroPermis: true,
             dateDelivrancePermis: true,
             prefecture: true,
             etatPermis: true,
             casStage: true,
+            id_recto: true,       // Ajout des fichiers uploadés
+            id_verso: true,
+            permis_recto: true,
+            permis_verso: true,
           },
         },
         session: {
@@ -33,14 +38,14 @@ export async function GET(request: Request) {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(sessionUsers);
   } catch (error) {
     console.error("Erreur lors de la récupération des inscriptions utilisateur:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des inscriptions utilisateur.' },
+      { error: "Erreur lors de la récupération des inscriptions utilisateur." },
       { status: 500 }
     );
   } finally {
@@ -48,13 +53,12 @@ export async function GET(request: Request) {
   }
 }
 
-
-// POST: Créer une nouvelle inscription (SessionUser)
 export async function POST(request: Request) {
   const {
     civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
     nationalite, dateNaissance, codePostalNaissance, numeroPermis,
-    dateDelivrancePermis, prefecture, etatPermis, casStage, sessionId
+    dateDelivrancePermis, prefecture, etatPermis, casStage, sessionId,
+    id_recto, id_verso, permis_recto, permis_verso, // Ajout des champs pour les fichiers
   } = await request.json();
 
   const newUser = await prisma.user.create({
@@ -62,13 +66,14 @@ export async function POST(request: Request) {
       civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
       nationalite, dateNaissance: new Date(dateNaissance), codePostalNaissance,
       numeroPermis, dateDelivrancePermis: new Date(dateDelivrancePermis),
-      prefecture, etatPermis, casStage
+      prefecture, etatPermis, casStage,
+      id_recto, id_verso, permis_recto, permis_verso, // Ajout des fichiers dans la création
     },
   });
 
   const sessionUser = await prisma.sessionUsers.create({
     data: {
-      sessionId: Number(sessionId), // Assure-toi que sessionId est un nombre
+      sessionId: Number(sessionId),
       userId: newUser.id,
       isPaid: false,
     },
@@ -85,6 +90,10 @@ export async function POST(request: Request) {
           prefecture: true,
           etatPermis: true,
           casStage: true,
+          id_recto: true,       // Ajout des fichiers dans la réponse
+          id_verso: true,
+          permis_recto: true,
+          permis_verso: true,
         },
       },
       session: {

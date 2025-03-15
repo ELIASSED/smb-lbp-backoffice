@@ -21,6 +21,10 @@ export default function SessionsPage() {
     etatPermis: "",
     casStage: "",
     sessionId: "",
+    id_recto: "",       // Ajout des champs pour les fichiers
+    id_verso: "",
+    permis_recto: "",
+    permis_verso: "",
   });
 
   const fetchSessions = async () => {
@@ -57,17 +61,40 @@ export default function SessionsPage() {
     fetchSessionUsers();
   }, []);
 
-  const handleAddSessionUser = async () => {
+  const handleAddSessionUser = async (e: React.FormEvent) => {
+    e.preventDefault(); // Empêche le rechargement de la page
     try {
       const response = await fetch("/api/session-users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSessionUser),
+        body: JSON.stringify({
+          civilite: "M.", // Valeur par défaut ou ajoute un champ
+          nom: newSessionUser.nom,
+          prenom: newSessionUser.prenom,
+          email: newSessionUser.email,
+          telephone: newSessionUser.telephone,
+          numeroPermis: newSessionUser.numeroPermis,
+          dateDelivrancePermis: newSessionUser.dateDelivrancePermis,
+          prefecture: newSessionUser.prefecture,
+          etatPermis: newSessionUser.etatPermis,
+          casStage: newSessionUser.casStage,
+          sessionId: newSessionUser.sessionId,
+          adresse: "Adresse par défaut", // Ajoute un champ si nécessaire
+          codePostal: "00000", // Ajoute un champ si nécessaire
+          ville: "Ville par défaut", // Ajoute un champ si nécessaire
+          nationalite: "Française", // Ajoute un champ si nécessaire
+          dateNaissance: "1990-01-01", // Ajoute un champ si nécessaire
+          codePostalNaissance: "00000", // Ajoute un champ si nécessaire
+          id_recto: newSessionUser.id_recto,
+          id_verso: newSessionUser.id_verso,
+          permis_recto: newSessionUser.permis_recto,
+          permis_verso: newSessionUser.permis_verso,
+        }),
       });
-  
+
       if (!response.ok) throw new Error("Erreur lors de l'ajout de l'inscription");
-  
-      await response.json(); // Pas besoin de stocker createdSessionUser si on recharge
+
+      await response.json();
       setShowModal(false);
       setNewSessionUser({
         nom: "",
@@ -80,9 +107,12 @@ export default function SessionsPage() {
         etatPermis: "",
         casStage: "",
         sessionId: "",
+        id_recto: "",
+        id_verso: "",
+        permis_recto: "",
+        permis_verso: "",
       });
-  
-      // Rafraîchir les données après l'ajout
+
       await fetchSessionUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -130,83 +160,115 @@ export default function SessionsPage() {
           Ajouter une inscription
         </button>
       </div>
-    <ul className="space-y-4">
-  {sessionUsers.length > 0 ? (
-    sessionUsers.map((sessionUser) => (
-      <li key={sessionUser.id} className="border-b pb-4">
-        <div className="flex justify-between items-center">
-          <div>
-            {sessionUser.user ? (
-              <>
-                <div className="font-semibold text-gray-800">
-                  {sessionUser.user.prenom} {sessionUser.user.nom}
+      <ul className="space-y-4">
+        {sessionUsers.length > 0 ? (
+          sessionUsers.map((sessionUser) => (
+            <li key={sessionUser.id} className="border-b pb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  {sessionUser.user ? (
+                    <>
+                      <div className="font-semibold text-gray-800">
+                        {sessionUser.user.prenom} {sessionUser.user.nom}
+                      </div>
+                      <div className="text-sm text-gray-600">Email: {sessionUser.user.email}</div>
+                      <div className="text-sm text-gray-600">Téléphone: {sessionUser.user.telephone}</div>
+                      <div className="text-sm text-gray-600">Numéro Permis: {sessionUser.user.numeroPermis}</div>
+                      <div className="text-sm text-gray-600">Cas de Stage: {sessionUser.user.casStage}</div>
+                      <div className="text-sm text-gray-600">Préfecture: {sessionUser.user.prefecture}</div>
+                      <div className="text-sm text-gray-600">État Permis: {sessionUser.user.etatPermis}</div>
+                      {/* Affichage des fichiers uploadés */}
+                      <div className="mt-2">
+                        <div className="font-bold">Documents:</div>
+                        {sessionUser.user.id_recto && (
+                          <div>
+                            <a href={sessionUser.user.id_recto} target="_blank" className="text-blue-600 hover:underline">
+                              Carte d’identité (recto)
+                            </a>
+                          </div>
+                        )}
+                        {sessionUser.user.id_verso && (
+                          <div>
+                            <a href={sessionUser.user.id_verso} target="_blank" className="text-blue-600 hover:underline">
+                              Carte d’identité (verso)
+                            </a>
+                          </div>
+                        )}
+                        {sessionUser.user.permis_recto && (
+                          <div>
+                            <a href={sessionUser.user.permis_recto} target="_blank" className="text-blue-600 hover:underline">
+                              Permis de conduire (recto)
+                            </a>
+                          </div>
+                        )}
+                        {sessionUser.user.permis_verso && (
+                          <div>
+                            <a href={sessionUser.user.permis_verso} target="_blank" className="text-blue-600 hover:underline">
+                              Permis de conduire (verso)
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-red-600">Données utilisateur manquantes</div>
+                  )}
+                  <div className="text-sm text-gray-600">
+                    Date d'Inscription: {new Date(sessionUser.createdAt).toLocaleString()}
+                  </div>
+                  <div className="text-sm font-semibold">
+                    Paiement: {sessionUser.isPaid ? "Payé" : "Non payé"}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">Email: {sessionUser.user.email}</div>
-                <div className="text-sm text-gray-600">Téléphone: {sessionUser.user.telephone}</div>
-                <div className="text-sm text-gray-600">Numéro Permis: {sessionUser.user.numeroPermis}</div>
-                <div className="text-sm text-gray-600">Cas de Stage: {sessionUser.user.casStage}</div>
-                <div className="text-sm text-gray-600">Préfecture: {sessionUser.user.prefecture}</div>
-                <div className="text-sm text-gray-600">État Permis: {sessionUser.user.etatPermis}</div>
-              </>
-            ) : (
-              <div className="text-sm text-red-600">Données utilisateur manquantes</div>
-            )}
-            <div className="text-sm text-gray-600">
-              Date d'Inscription: {new Date(sessionUser.createdAt).toLocaleString()}
-            </div>
-            <div className="text-sm font-semibold">
-              Paiement: {sessionUser.isPaid ? "Payé" : "Non payé"}
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            {!sessionUser.isPaid && (
-              <button
-                onClick={() => handleMarkAsPaid(sessionUser.id)}
-                className="p-2 bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                Marquer comme payé
-              </button>
-            )}
-            <button
-              onClick={() => openModal("edit", "sessionUser", sessionUser)}
-              className="p-2 text-gray-600 hover:text-blue-600"
-            >
-              <PencilIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => openModal("delete", "sessionUser", sessionUser)}
-              className="p-2 text-gray-600 hover:text-red-600"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        <div className="mt-2 text-sm text-gray-600">
-          <div className="font-bold">Session:</div>
-          {sessionUser.session ? (
-            <>
-              <div>{sessionUser.session.numeroStageAnts}</div>
-              <div>
-                Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
-                {new Date(sessionUser.session.endDate).toLocaleDateString()}
+                <div className="flex space-x-2">
+                  {!sessionUser.isPaid && (
+                    <button
+                      onClick={() => handleMarkAsPaid(sessionUser.id)}
+                      className="p-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      Marquer comme payé
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openModal("edit", "sessionUser", sessionUser)}
+                    className="p-2 text-gray-600 hover:text-blue-600"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openModal("delete", "sessionUser", sessionUser)}
+                    className="p-2 text-gray-600 hover:text-red-600"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="text-sm text-red-600">Session non disponible</div>
-          )}
-        </div>
-      </li>
-    ))
-  ) : (
-    <li>Aucune inscription trouvée.</li>
-  )}
-</ul>
+              <div className="mt-2 text-sm text-gray-600">
+                <div className="font-bold">Session:</div>
+                {sessionUser.session ? (
+                  <>
+                    <div>{sessionUser.session.numeroStageAnts}</div>
+                    <div>
+                      Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
+                      {new Date(sessionUser.session.endDate).toLocaleDateString()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-red-600">Session non disponible</div>
+                )}
+              </div>
+            </li>
+          ))
+        ) : (
+          <li>Aucune inscription trouvée.</li>
+        )}
+      </ul>
 
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/2">
             <h3 className="text-lg font-semibold mb-4">Ajouter une Inscription</h3>
-            <form className="space-y-4">
+            <form onSubmit={handleAddSessionUser} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nom</label>
                 <input
@@ -328,6 +390,51 @@ export default function SessionsPage() {
                   ))}
                 </select>
               </div>
+              {/* Champs pour les fichiers (simplifiés comme URLs pour cet exemple) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Carte d’identité (recto)</label>
+                <input
+                  type="text"
+                  name="id_recto"
+                  value={newSessionUser.id_recto}
+                  onChange={handleInputChange}
+                  placeholder="URL du fichier"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Carte d’identité (verso)</label>
+                <input
+                  type="text"
+                  name="id_verso"
+                  value={newSessionUser.id_verso}
+                  onChange={handleInputChange}
+                  placeholder="URL du fichier"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Permis (recto)</label>
+                <input
+                  type="text"
+                  name="permis_recto"
+                  value={newSessionUser.permis_recto}
+                  onChange={handleInputChange}
+                  placeholder="URL du fichier"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Permis (verso)</label>
+                <input
+                  type="text"
+                  name="permis_verso"
+                  value={newSessionUser.permis_verso}
+                  onChange={handleInputChange}
+                  placeholder="URL du fichier"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
               <div className="flex justify-end space-x-2">
                 <button
                   onClick={() => setShowModal(false)}
@@ -337,8 +444,7 @@ export default function SessionsPage() {
                   Annuler
                 </button>
                 <button
-                  onClick={handleAddSessionUser}
-                  type="button"
+                  type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Ajouter
