@@ -73,15 +73,21 @@ export const createSession = async (data: StageFormData): Promise<Stage> => {
   });
 };
 
-export const updateSession = async (id: number, data: StageFormData): Promise<Stage> => {
-  return await fetchApi(`${API_URL}/${id}`, {
+export async function updateSession(id: number, data: StageFormData) {
+  const response = await fetch(`${API_URL}/${id}`, { // Inclure l'ID dans l'URL
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data), // Pas besoin d'inclure l'ID ici, il est dans l'URL
   });
-};
+
+  const text = await response.text();
+  if (!response.ok) {
+    console.error("Réponse d'erreur du serveur:", text);
+    throw new Error(text || `Erreur ${response.status}: ${response.statusText}`);
+  }
+
+  return text ? JSON.parse(text) : {};
+}
 
 export const deleteSession = async (id: number): Promise<void> => {
   await fetchApi(`${API_URL}/${id}`, { method: "DELETE" });

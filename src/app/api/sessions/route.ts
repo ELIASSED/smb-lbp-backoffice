@@ -76,8 +76,6 @@ export async function POST(request: Request) {
     // --- Vérification des champs obligatoires ---
     const missingFields: string[] = [];
     if (!numeroStageAnts) missingFields.push("numeroStageAnts");
-    if (!description) missingFields.push("description"); // IMPORTANT vu le schéma
-    if (!location) missingFields.push("location");
     if (price === undefined) missingFields.push("price");
     if (capacity === undefined) missingFields.push("capacity");
     if (!startDate) missingFields.push("startDate");
@@ -166,8 +164,6 @@ export async function POST(request: Request) {
     const newSession = await prisma.session.create({
       data: {
         numeroStageAnts,
-        description,
-        location,
         price: numericPrice,
         capacity: numericCapacity,
         startDate: start,

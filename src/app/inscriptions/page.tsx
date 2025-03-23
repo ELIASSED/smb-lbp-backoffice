@@ -194,31 +194,51 @@ export default function SessionsPage() {
         {sessionUsers.length > 0 ? (
           sessionUsers.map((sessionUser) => (
             <li key={sessionUser.id} className="border-b pb-4">
-              <div className="flex justify-between items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Section 1 : Informations personnelles */}
+                <div>
+                 
+                  {sessionUser.user ? (
+                    <>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium"></span> {sessionUser.user.prenom} {sessionUser.user.nom}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium"></span> {sessionUser.user.email}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium"></span> {sessionUser.user.telephone}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Numéro Permis:</span> {sessionUser.user.numeroPermis}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium"></span> {sessionUser.user.casStage}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-red-600">Données utilisateur manquantes</div>
+                  )}
+                </div>
+
+                {/* Section 2 : Informations de session et documents */}
                 <div>
                   {sessionUser.user ? (
                     <>
-                      <div className="font-semibold text-gray-800">
-                        {sessionUser.user.prenom} {sessionUser.user.nom}
+                      <div className="text-sm text-gray-600">
+                      
+                        {sessionUser.session ? (
+                          <>  <div className="font-bold">  <div>{sessionUser.session.numeroStageAnts}</div></div>
+                         
+                            <div>
+                              Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
+                              {new Date(sessionUser.session.endDate).toLocaleDateString()}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-red-600">Session non disponible</div>
+                        )}
                       </div>
-                      <div className="text-sm text-gray-600">Email: {sessionUser.user.email}</div>
-                      <div className="text-sm text-gray-600">Téléphone: {sessionUser.user.telephone}</div>
-                      <div className="text-sm text-gray-600">Numéro Permis: {sessionUser.user.numeroPermis}</div>
-                      <div className="text-sm text-gray-600">Cas de Stage: {sessionUser.user.casStage}</div>
-                      <div className="mt-2 text-sm text-gray-600">
-                <div className="font-bold">Session:</div>
-                {sessionUser.session ? (
-                  <>
-                    <div>{sessionUser.session.numeroStageAnts}</div>
-                    <div>
-                      Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
-                      {new Date(sessionUser.session.endDate).toLocaleDateString()}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-red-600">Session non disponible</div>
-                )}
-              </div>
                       <div className="mt-2">
                         <div className="font-bold">Documents:</div>
                         {sessionUser.user.id_recto && (
@@ -250,7 +270,6 @@ export default function SessionsPage() {
                           </div>
                         )}
                       </div>
-                      {/* Section Attestation */}
                       <div className="mt-2">
                         <div className="font-bold">Attestation:</div>
                         {sessionUser.user.attestationPdfUrl ? (
@@ -270,53 +289,40 @@ export default function SessionsPage() {
                           <span className="text-gray-500">Non disponible</span>
                         )}
                       </div>
+                      <div className="text-sm text-gray-600 mt-2">
+                        <span className="font-medium">Date d'Inscription:</span>{" "}
+                        {new Date(sessionUser.createdAt).toLocaleString()}
+                      </div>
+                      <div className="text-sm font-semibold">
+                        <span className="font-medium">Paiement:</span> {sessionUser.isPaid ? "Payé" : "Non payé"}
+                      </div>
                     </>
-                  ) : (
-                    <div className="text-sm text-red-600">Données utilisateur manquantes</div>
-                  )}
-                  <div className="text-sm text-gray-600">
-                    Date d'Inscription: {new Date(sessionUser.createdAt).toLocaleString()}
-                  </div>
-                  <div className="text-sm font-semibold">
-                    Paiement: {sessionUser.isPaid ? "Payé" : "Non payé"}
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  {!sessionUser.isPaid && (
-                    <button
-                      onClick={() => handleMarkAsPaid(sessionUser.id)}
-                      className="p-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      Marquer comme payé
-                    </button>
-                  )}
-                  <button
-                    onClick={() => openModal("edit", sessionUser)}
-                    className="p-2 text-gray-600 hover:text-blue-600"
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => openModal("archive", sessionUser)}
-                    className="p-2 text-gray-600 hover:text-red-600"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
+                  ) : null}
                 </div>
               </div>
-              <div className="mt-2 text-sm text-gray-600">
-                <div className="font-bold">Session:</div>
-                {sessionUser.session ? (
-                  <>
-                    <div>{sessionUser.session.numeroStageAnts}</div>
-                    <div>
-                      Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
-                      {new Date(sessionUser.session.endDate).toLocaleDateString()}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-red-600">Session non disponible</div>
+
+              {/* Boutons d'action */}
+              <div className="flex justify-end space-x-2 mt-4">
+                {!sessionUser.isPaid && (
+                  <button
+                    onClick={() => handleMarkAsPaid(sessionUser.id)}
+                    className="p-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    Marquer comme payé
+                  </button>
                 )}
+                <button
+                  onClick={() => openModal("edit", sessionUser)}
+                  className="p-2 text-gray-600 hover:text-blue-600"
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => openModal("archive", sessionUser)}
+                  className="p-2 text-gray-600 hover:text-red-600"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
               </div>
             </li>
           ))

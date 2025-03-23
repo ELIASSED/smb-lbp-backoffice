@@ -49,23 +49,19 @@ const BackofficeStageList: React.FC = () => {
     try {
       switch (modalState.mode) {
         case "create":
-          // Vérifie si un stage avec le même numeroStageAnts existe déjà
-          if (stages.some((stage) => stage.numeroStageAnts === formData.numeroStageAnts)) {
-            throw new Error("Un stage avec ce numéro existe déjà.");
-          }
           await createSession(formData);
           break;
 
-        case "edit":
-          if (!modalState.selectedStage?.id) {
-            throw new Error("ID manquant");
-          }
-          await updateSession(modalState.selectedStage.id, formData);
-          break;
+          case "edit":
+            if (!modalState.selectedStage?.id) {
+              throw new Error("ID manquant");
+            }
+            await updateSession(modalState.selectedStage.id, formData);
+            break;
 
         case "delete":
           if (!modalState.selectedStage?.id) {
-            throw new Error("ID manquant");
+            throw new Error("ID manquant pour l'archivage.");
           }
           await deleteSession(modalState.selectedStage.id);
           break;
@@ -78,7 +74,7 @@ const BackofficeStageList: React.FC = () => {
       closeModal();
     } catch (error) {
       console.error("Erreur:", error);
-      alert(error instanceof Error ? error.message : "Une erreur s'est produite.");
+      alert(error instanceof Error ? error.message : "Une erreur s'est produite lors de l'opération.");
     }
   };
 
@@ -128,9 +124,9 @@ const BackofficeStageList: React.FC = () => {
         <>
           {paginatedStages.length > 0 ? (
             <ul className="divide-y divide-gray-200">
-              {paginatedStages.map((stage) => (
+              {paginatedStages.map((stage, index) => (
                 <li
-                  key={stage.id} // Utilisation de l'ID uniquement
+                  key={`${stage.id}-${index}`}
                   className={`py-4 ${stage.isArchived ? "opacity-60" : ""}`}
                 >
                   <div className="flex justify-between items-center">

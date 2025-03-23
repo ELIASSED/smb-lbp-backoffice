@@ -56,7 +56,7 @@ export const StageModal: React.FC<StageModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<StageFormData>({
     numeroStageAnts: "",
-    location: "",
+    location: "", // Toujours une chaîne vide par défaut
     description: "",
     capacity: 0,
     price: "",
@@ -72,15 +72,15 @@ export const StageModal: React.FC<StageModalProps> = ({
   useEffect(() => {
     if (stage && (mode === "edit" || mode === "delete")) {
       setFormData({
-        numeroStageAnts: stage.numeroStageAnts,
-        location: stage.location,
-        description: stage.description,
-        capacity: stage.capacity,
-        price: stage.price,
-        startDate: new Date(stage.startDate).toISOString().split("T")[0],
-        endDate: new Date(stage.endDate).toISOString().split("T")[0],
-        instructorId: stage.instructor?.id.toString() || "",
-        psychologueId: stage.psychologue?.id.toString() || "",
+        numeroStageAnts: stage.numeroStageAnts || "",
+        location: stage.location || "",
+        description: stage.description || "",
+        capacity: stage.capacity || 0,
+        price: stage.price ? stage.price.toString() : "",
+        startDate: stage.startDate ? new Date(stage.startDate).toISOString().split("T")[0] : "",
+        endDate: stage.endDate ? new Date(stage.endDate).toISOString().split("T")[0] : "",
+        instructorId: stage.instructor?.id ? stage.instructor.id.toString() : "",
+        psychologueId: stage.psychologue?.id ? stage.psychologue.id.toString() : "",
       });
     } else if (mode === "create") {
       setFormData({
@@ -117,24 +117,40 @@ export const StageModal: React.FC<StageModalProps> = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        type === "number"
-          ? value === ""
-            ? ""
-            : parseFloat(value)
-          : value,
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+  
+    const submissionData: StageFormData = {
+      ...formData,
+      price: formData.price || "0",
+      capacity: Number(formData.capacity) || 0,
+    };
+  
+    if (
+      !submissionData.numeroStageAnts ||
+      !submissionData.location ||
+      isNaN(Number(submissionData.price)) ||
+      isNaN(submissionData.capacity) ||
+      !submissionData.startDate ||
+      !submissionData.endDate ||
+      !submissionData.instructorId ||
+      !submissionData.psychologueId
+    ) {
+      alert("Veuillez remplir tous les champs correctement.");
+      return;
+    }
+  
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit(submissionData);
       onClose();
     } catch (error) {
       console.error("Erreur lors de la soumission:", error);
@@ -176,7 +192,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="text"
             name="numeroStageAnts"
-            value={formData.numeroStageAnts || ""}
+            value={formData.numeroStageAnts}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -187,7 +203,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="text"
             name="location"
-            value={formData.location || ""}
+            value={formData.location}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -197,7 +213,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Description</label>
           <textarea
             name="description"
-            value={formData.description || ""}
+            value={formData.description}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
@@ -208,10 +224,11 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="number"
             name="price"
-            value={formData.price !== undefined ? formData.price : ""}
+            value={formData.price}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            step="0.01"
           />
         </div>
         <div>
@@ -219,7 +236,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="number"
             name="capacity"
-            value={formData.capacity !== undefined ? formData.capacity : ""}
+            value={formData.capacity}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             min={1}
@@ -231,7 +248,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Animateur BAFM</label>
           <select
             name="instructorId"
-            value={formData.instructorId || ""}
+            value={formData.instructorId}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -250,7 +267,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <label className="block text-sm font-medium mb-1">Psychologue</label>
           <select
             name="psychologueId"
-            value={formData.psychologueId || ""}
+            value={formData.psychologueId}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -270,7 +287,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="date"
             name="startDate"
-            value={formData.startDate || ""}
+            value={formData.startDate}
             onChange={(e) => {
               const newStartDate = e.target.value;
               if (newStartDate) {
@@ -292,7 +309,7 @@ export const StageModal: React.FC<StageModalProps> = ({
           <input
             type="date"
             name="endDate"
-            value={formData.endDate || ""}
+            value={formData.endDate}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             readOnly
