@@ -1,20 +1,4 @@
 -- CreateTable
-CREATE TABLE "Relance" (
-    "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastName" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
-    "userId" INTEGER NOT NULL,
-    "lastSessionId" INTEGER,
-    "profession" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Relance_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "civilite" TEXT NOT NULL,
@@ -31,11 +15,16 @@ CREATE TABLE "User" (
     "dateNaissance" TIMESTAMP(3) NOT NULL,
     "codePostalNaissance" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "id_recto" TEXT,
+    "id_verso" TEXT,
+    "permis_recto" TEXT,
+    "permis_verso" TEXT,
     "numeroPermis" TEXT NOT NULL,
     "dateDelivrancePermis" TIMESTAMP(3) NOT NULL,
     "prefecture" TEXT NOT NULL,
     "etatPermis" TEXT NOT NULL,
     "casStage" TEXT NOT NULL,
+    "attestationPdf" BYTEA,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -45,10 +34,11 @@ CREATE TABLE "SessionUsers" (
     "id" SERIAL NOT NULL,
     "sessionId" INTEGER NOT NULL,
     "userId" INTEGER NOT NULL,
+    "isPaid" BOOLEAN NOT NULL DEFAULT false,
+    "isArchived" BOOLEAN NOT NULL DEFAULT false,
+    "paymentIntentId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "isArchived" BOOLEAN NOT NULL DEFAULT false,
-    "isPaid" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "SessionUsers_pkey" PRIMARY KEY ("id")
 );
@@ -114,7 +104,10 @@ CREATE TABLE "Payment" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Relance_userId_lastSessionId_key" ON "Relance"("userId", "lastSessionId");
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SessionUsers_paymentIntentId_key" ON "SessionUsers"("paymentIntentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SessionUsers_sessionId_userId_key" ON "SessionUsers"("sessionId", "userId");
@@ -124,12 +117,6 @@ CREATE UNIQUE INDEX "Instructor_email_key" ON "Instructor"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Psychologue_email_key" ON "Psychologue"("email");
-
--- AddForeignKey
-ALTER TABLE "Relance" ADD CONSTRAINT "Relance_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Relance" ADD CONSTRAINT "Relance_lastSessionId_fkey" FOREIGN KEY ("lastSessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SessionUsers" ADD CONSTRAINT "SessionUsers_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

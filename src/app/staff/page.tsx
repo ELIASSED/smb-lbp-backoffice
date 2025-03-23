@@ -15,7 +15,7 @@ import {
 
 import { Modal } from "../../components/StaffModal";
 import { StaffListItem } from "@/components/StaffListItem";
-import { StaffForm, ModalMode, StaffFormData } from "../../components/StaffForm";
+import { StaffForm,  StaffFormData } from "../../components/StaffForm";
 
 /** Structure du state pour la modale */
 interface ModalState {

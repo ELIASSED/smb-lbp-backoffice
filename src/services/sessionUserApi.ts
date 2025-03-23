@@ -12,6 +12,11 @@ export interface SessionUser {
       endDate: string;
     };
     user?: {
+      attestationPdfUrl?: string | null;
+      permis_verso: File | null;
+      permis_recto: File | null;
+      id_verso: File | null;
+      id_recto: File | null;
       id: number;
       nom: string;
       prenom: string;

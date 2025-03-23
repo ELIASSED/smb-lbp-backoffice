@@ -35,6 +35,7 @@ export default function DashboardPage() {
       }
       const data: Earnings = await response.json();
       setEarnings(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Erreur lors de la récupération des données");
     } finally {
@@ -102,6 +103,7 @@ export default function DashboardPage() {
 }
 
 // Composant réutilisable pour les cartes non liées aux earnings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const DashboardCard = ({ icon, title, value, description, onClick }: any) => (
   <div
     className="bg-white p-6 rounded-lg shadow-lg hover:bg-yellow hover:text-white transition duration-300 cursor-pointer"

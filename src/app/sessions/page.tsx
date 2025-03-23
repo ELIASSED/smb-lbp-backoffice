@@ -1,9 +1,7 @@
-// BackofficeStageList.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { PencilIcon, PlusCircleIcon, TrashIcon } from "lucide-react";
-
-import { StageModal } from "../../components/StageModal"; // Chemin à adapter selon votre structure
+import { StageModal } from "../../components/StageModal";
 import {
   Stage,
   StageFormData,
@@ -51,6 +49,10 @@ const BackofficeStageList: React.FC = () => {
     try {
       switch (modalState.mode) {
         case "create":
+          // Vérifie si un stage avec le même numeroStageAnts existe déjà
+          if (stages.some((stage) => stage.numeroStageAnts === formData.numeroStageAnts)) {
+            throw new Error("Un stage avec ce numéro existe déjà.");
+          }
           await createSession(formData);
           break;
 
@@ -76,7 +78,7 @@ const BackofficeStageList: React.FC = () => {
       closeModal();
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Une erreur s'est produite lors de l'opération.");
+      alert(error instanceof Error ? error.message : "Une erreur s'est produite.");
     }
   };
 
@@ -126,9 +128,9 @@ const BackofficeStageList: React.FC = () => {
         <>
           {paginatedStages.length > 0 ? (
             <ul className="divide-y divide-gray-200">
-              {paginatedStages.map((stage, index) => (
+              {paginatedStages.map((stage) => (
                 <li
-                  key={`${stage.id}-${index}`}
+                  key={stage.id} // Utilisation de l'ID uniquement
                   className={`py-4 ${stage.isArchived ? "opacity-60" : ""}`}
                 >
                   <div className="flex justify-between items-center">
@@ -143,7 +145,6 @@ const BackofficeStageList: React.FC = () => {
                           </span>
                         )}
                       </p>
-
                       <p className="text-gray-600 mt-1">
                         <span className="font-semibold">BAFM : </span>
                         {stage.instructor
@@ -229,7 +230,6 @@ const BackofficeStageList: React.FC = () => {
         </>
       )}
 
-      {/* Modal pour Créer / Modifier / Supprimer */}
       <StageModal
         isOpen={modalState.isOpen}
         onClose={closeModal}

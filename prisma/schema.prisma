@@ -8,22 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Relance {
-  id            Int      @id @default(autoincrement())
-  email         String
-  firstName     String
-  lastName      String
-  phone         String
-  userId        Int
-  lastSessionId Int?
-  profession    String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  session       Session? @relation(fields: [lastSessionId], references: [id])
-  user          User     @relation(fields: [userId], references: [id])
-  @@unique([userId, lastSessionId])
-}
-
 model User {
   id                   Int            @id @default(autoincrement())
   civilite             String
@@ -49,7 +33,7 @@ model User {
   prefecture           String
   etatPermis           String
   casStage             String
-  relances             Relance[]
+  attestationPdf       Bytes?
   sessionUsers         SessionUsers[]
 }
 
@@ -82,7 +66,6 @@ model Session {
   instructorId    Int
   psychologueId   Int
   isArchived      Boolean        @default(false)
-  relances        Relance[]
   instructor      Instructor     @relation(fields: [instructorId], references: [id])
   psychologue     Psychologue    @relation(fields: [psychologueId], references: [id])
   users           SessionUsers[]

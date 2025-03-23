@@ -1,5 +1,3 @@
-// services/stageApi.ts
-
 export interface Instructor {
   id: number;
   firstName: string;
@@ -31,9 +29,9 @@ export interface Stage {
 }
 
 export interface StageFormData {
-  description: string | number | readonly string[] | undefined;
   numeroStageAnts: string;
   location: string;
+  description: string;
   capacity: number;
   price: string;
   startDate: string;
@@ -44,7 +42,6 @@ export interface StageFormData {
 
 const API_URL = "/api/sessions";
 
-// ✅ Fonction générique pour les appels API
 const fetchApi = async (url: string, options?: RequestInit) => {
   try {
     const response = await fetch(url, options);
@@ -58,18 +55,15 @@ const fetchApi = async (url: string, options?: RequestInit) => {
   }
 };
 
-// 🔹 Obtenir toutes les sessions
-export const getSessions = async () => {
+export const getSessions = async (): Promise<Stage[]> => {
   return await fetchApi(API_URL);
 };
 
-// 🔹 Obtenir une session par ID
-export const getSessionById = async (id: number) => {
+export const getSessionById = async (id: number): Promise<Stage> => {
   return await fetchApi(`${API_URL}/${id}`);
 };
 
-// 🔹 Créer une session (avec protection contre le double appel)
-export const createSession = async (data: any) => {
+export const createSession = async (data: StageFormData): Promise<Stage> => {
   return await fetchApi(API_URL, {
     method: "POST",
     headers: {
@@ -79,8 +73,7 @@ export const createSession = async (data: any) => {
   });
 };
 
-// 🔹 Mettre à jour une session
-export const updateSession = async (id: number, data: any) => {
+export const updateSession = async (id: number, data: StageFormData): Promise<Stage> => {
   return await fetchApi(`${API_URL}/${id}`, {
     method: "PUT",
     headers: {
@@ -90,17 +83,14 @@ export const updateSession = async (id: number, data: any) => {
   });
 };
 
-// 🔹 Supprimer une session
-export const deleteSession = async (id: number) => {
-  return await fetchApi(`${API_URL}/${id}`, { method: "DELETE" });
+export const deleteSession = async (id: number): Promise<void> => {
+  await fetchApi(`${API_URL}/${id}`, { method: "DELETE" });
 };
 
-// 🔹 Récupérer les instructeurs et psychologues (évite les appels redondants)
-export const getInstructors = async () => {
+export const getInstructors = async (): Promise<Instructor[]> => {
   return await fetchApi("/api/animateurs");
 };
 
-export const getPsychologists = async () => {
+export const getPsychologists = async (): Promise<Psychologist[]> => {
   return await fetchApi("/api/psychologues");
 };
-

@@ -1,15 +1,19 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Stage,
-  StageFormData,
-  createSession,
-  getInstructors,
-  getPsychologists,
-  updateSession,
-} from "../services/stageApi";
+import { Stage, StageFormData, getInstructors, getPsychologists } from "../services/stageApi";
 
-// Composant Modal générique
+interface Instructor {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
+interface Psychologist {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,13 +39,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
   );
 };
 
-// Composant StageModal
 interface StageModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: "create" | "edit" | "delete" | null;
   stage?: Stage;
-  onSubmit: (data: StageFormData) => void;
+  onSubmit: (data: StageFormData) => Promise<void>;
 }
 
 export const StageModal: React.FC<StageModalProps> = ({
@@ -62,11 +65,10 @@ export const StageModal: React.FC<StageModalProps> = ({
     instructorId: "",
     psychologueId: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [instructorList, setInstructorList] = useState<Instructor[]>([]);
+  const [psychologistList, setPsychologistList] = useState<Psychologist[]>([]);
 
-  const [instructorList, setInstructorList] = useState<any[]>([]);
-  const [psychologistList, setPsychologistList] = useState<any[]>([]);
-
-  // Remplissage du formulaire en mode "edit" ou "delete"
   useEffect(() => {
     if (stage && (mode === "edit" || mode === "delete")) {
       setFormData({
@@ -86,7 +88,7 @@ export const StageModal: React.FC<StageModalProps> = ({
         location: "",
         description: "",
         capacity: 20,
-        price: 199.0,
+        price: "199.0",
         startDate: "",
         endDate: "",
         instructorId: "",
@@ -95,7 +97,6 @@ export const StageModal: React.FC<StageModalProps> = ({
     }
   }, [stage, mode]);
 
-  // Récupération des listes d'animateurs et de psychologues
   useEffect(() => {
     const fetchStaff = async () => {
       try {
@@ -106,16 +107,13 @@ export const StageModal: React.FC<StageModalProps> = ({
         setInstructorList(instructors);
         setPsychologistList(psychologists);
       } catch (error) {
-        console.error(error);
+        console.error("Erreur lors du chargement des animateurs et psychologues:", error);
       }
     };
 
-    if (isOpen) {
-      fetchStaff();
-    }
+    if (isOpen) fetchStaff();
   }, [isOpen]);
 
-  // Gestion des changements dans les inputs
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -133,23 +131,19 @@ export const StageModal: React.FC<StageModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      if (mode === "edit" && stage?.id) {
-        await updateSession(stage.id, formData);
-        onSubmit(formData);
-        onClose();
-      } else if (mode === "create") {
-        await createSession(formData);
-        onSubmit(formData);
-        onClose();
-      }
+      await onSubmit(formData);
+      onClose();
     } catch (error) {
       console.error("Erreur lors de la soumission:", error);
       alert("Une erreur est survenue. Vérifiez les données et réessayez.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Mode "delete": confirmation uniquement
   if (mode === "delete") {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title="Archiver le stage">
@@ -159,7 +153,8 @@ export const StageModal: React.FC<StageModalProps> = ({
           <div className="flex justify-end">
             <button
               onClick={() => onSubmit(formData)}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400"
             >
               Archiver
             </button>
@@ -169,7 +164,6 @@ export const StageModal: React.FC<StageModalProps> = ({
     );
   }
 
-  // Mode "create" ou "edit": affichage du formulaire complet
   return (
     <Modal
       isOpen={isOpen}
@@ -188,7 +182,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Lieu</label>
           <input
@@ -200,7 +193,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Description</label>
           <textarea
@@ -211,7 +203,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             rows={3}
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Prix</label>
           <input
@@ -223,7 +214,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Capacité</label>
           <input
@@ -237,7 +227,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Animateur BAFM</label>
           <select
@@ -257,7 +246,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             ))}
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Psychologue</label>
           <select
@@ -277,7 +265,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             ))}
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Date de début</label>
           <input
@@ -300,7 +287,6 @@ export const StageModal: React.FC<StageModalProps> = ({
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Date de fin</label>
           <input
@@ -312,11 +298,11 @@ export const StageModal: React.FC<StageModalProps> = ({
             readOnly
           />
         </div>
-
         <div className="flex justify-end mt-6">
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
           >
             {mode === "create" ? "Créer" : "Modifier"}
           </button>
