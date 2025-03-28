@@ -1,8 +1,68 @@
 "use client";
 import { useEffect, useState } from "react";
 import { PencilIcon, TrashIcon, PlusCircleIcon } from "@heroicons/react/solid";
-import { SessionUser, Session } from "../../services/sessionUserApi"; // Ajuste le chemin
-import { RegistrationModal } from "../../components/RegistrationModal"; // Ajuste le chemin
+import { SessionUser, Session } from "../../services/sessionUserApi";
+import { updateRegistration, archiveRegistration, getStages } from "../../services/registrationApi";
+import { createClient } from "@supabase/supabase-js";
+import { v4 as uuidv4 } from "uuid";
+
+// Initialisation du client Supabase
+const supabase = createClient(
+  process.env.SUPABASE_DATABASE_URL || "https://fewxlrfepeidboogmhbv.supabase.co",
+  process.env.PUBLIC_SUPABASE_ANON_KEY || "YOUR_SUPABASE_ANON_KEY"
+);
+
+interface Stage {
+  id: number;
+  numeroStageAnts: string;
+}
+
+interface FormData {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  numeroPermis: string;
+  dateDelivrancePermis: string;
+  prefecture: string;
+  etatPermis: string;
+  casStage: string;
+  sessionId: string;
+  id_recto: string;
+  id_verso: string;
+  permis_recto: string;
+  permis_verso: string;
+}
+
+const uploadFilesToSupabase = async (id: string, files: { [key: string]: File | null }): Promise<{ [key: string]: string }> => {
+  const uploadedPaths: { [key: string]: string } = {};
+  const fileFields = {
+    scanPermisRecto: "permis_recto",
+    scanPermisVerso: "permis_verso",
+    scanIdentiteRecto: "id_recto",
+    scanIdentiteVerso: "id_verso",
+  };
+
+  for (const [field, dbField] of Object.entries(fileFields)) {
+    const file = files[field];
+    if (file) {
+      const filePath = `${id}/${dbField}/${Date.now()}_${file.name}`;
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file, { upsert: true });
+
+      if (error) {
+        console.error(`Erreur d'upload pour ${field}:`, error.message);
+        throw new Error(`Échec de l'upload de ${field}: ${error.message}`);
+      }
+
+      const { publicUrl } = supabase.storage.from("documents").getPublicUrl(filePath).data;
+      uploadedPaths[dbField] = publicUrl;
+    }
+  }
+
+  return uploadedPaths;
+};
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -13,6 +73,7 @@ export default function SessionsPage() {
   const [showRegistrationModal, setShowRegistrationModal] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<"edit" | "archive" | null>(null);
   const [selectedSessionUser, setSelectedSessionUser] = useState<SessionUser | undefined>(undefined);
+  const [stageList, setStageList] = useState<Stage[]>([]);
 
   const [newSessionUser, setNewSessionUser] = useState({
     nom: "",
@@ -30,6 +91,39 @@ export default function SessionsPage() {
     permis_recto: "",
     permis_verso: "",
   });
+
+  const [newSessionUserFiles, setNewSessionUserFiles] = useState<{ [key: string]: File | null }>({
+    scanPermisRecto: null,
+    scanPermisVerso: null,
+    scanIdentiteRecto: null,
+    scanIdentiteVerso: null,
+  });
+
+  const [editFormData, setEditFormData] = useState<FormData>({
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    numeroPermis: "",
+    dateDelivrancePermis: "",
+    prefecture: "",
+    etatPermis: "",
+    casStage: "",
+    sessionId: "",
+    id_recto: "",
+    id_verso: "",
+    permis_recto: "",
+    permis_verso: "",
+  });
+
+  const [editFormFiles, setEditFormFiles] = useState<{ [key: string]: File | null }>({
+    scanPermisRecto: null,
+    scanPermisVerso: null,
+    scanIdentiteRecto: null,
+    scanIdentiteVerso: null,
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchSessions = async () => {
     setLoading(true);
@@ -51,7 +145,6 @@ export default function SessionsPage() {
       const response = await fetch("/api/session-users");
       if (!response.ok) throw new Error("Erreur lors de la récupération des inscriptions");
       const data: SessionUser[] = await response.json();
-      console.log("Données de l'API /api/session-users :", data);
       setSessionUsers(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -60,14 +153,59 @@ export default function SessionsPage() {
     }
   };
 
+  const fetchStages = async () => {
+    try {
+      const stages = await getStages();
+      console.log("Stages récupérés :", stages); // Pour déboguer
+      if (stages && Array.isArray(stages)) {
+        setStageList(stages);
+      } else {
+        throw new Error("Les données des stages ne sont pas valides");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des stages :", error);
+      setError("Impossible de charger les stages");
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
     fetchSessionUsers();
   }, []);
 
+  // Charger les stages au montage initial pour éviter le fetch tardif
+  useEffect(() => {
+    fetchStages();
+  }, []);
+
+  useEffect(() => {
+    if (selectedSessionUser && (modalMode === "edit" || modalMode === "archive")) {
+      setEditFormData({
+        nom: selectedSessionUser.user.nom || "",
+        prenom: selectedSessionUser.user.prenom || "",
+        email: selectedSessionUser.user.email || "",
+        telephone: selectedSessionUser.user.telephone || "",
+        numeroPermis: selectedSessionUser.user.numeroPermis || "",
+        dateDelivrancePermis: selectedSessionUser.user.dateDelivrancePermis || "",
+        prefecture: selectedSessionUser.user.prefecture || "",
+        etatPermis: selectedSessionUser.user.etatPermis || "",
+        casStage: selectedSessionUser.user.casStage || "",
+        sessionId: selectedSessionUser.session?.id.toString() || "",
+        id_recto: selectedSessionUser.user.id_recto || "",
+        id_verso: selectedSessionUser.user.id_verso || "",
+        permis_recto: selectedSessionUser.user.permis_recto || "",
+        permis_verso: selectedSessionUser.user.permis_verso || "",
+      });
+    }
+  }, [selectedSessionUser, modalMode]);
+
   const handleAddSessionUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
+      const tempId = uuidv4();
+      const uploadedPaths = await uploadFilesToSupabase(tempId, newSessionUserFiles);
+
       const response = await fetch("/api/session-users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,23 +220,25 @@ export default function SessionsPage() {
           prefecture: newSessionUser.prefecture,
           etatPermis: newSessionUser.etatPermis,
           casStage: newSessionUser.casStage,
-          sessionId: newSessionUser.sessionId,
+          sessionId: parseInt(newSessionUser.sessionId),
           adresse: "Adresse par défaut",
           codePostal: "00000",
           ville: "Ville par défaut",
           nationalite: "Française",
           dateNaissance: "1990-01-01",
           codePostalNaissance: "00000",
-          id_recto: newSessionUser.id_recto,
-          id_verso: newSessionUser.id_verso,
-          permis_recto: newSessionUser.permis_recto,
-          permis_verso: newSessionUser.permis_verso,
+          id_recto: uploadedPaths.id_recto || null,
+          id_verso: uploadedPaths.id_verso || null,
+          permis_recto: uploadedPaths.permis_recto || null,
+          permis_verso: uploadedPaths.permis_verso || null,
         }),
       });
 
-      if (!response.ok) throw new Error("Erreur lors de l'ajout de l'inscription");
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de l'ajout de l'inscription");
+      }
 
-      await response.json();
       setShowAddModal(false);
       setNewSessionUser({
         nom: "",
@@ -116,25 +256,35 @@ export default function SessionsPage() {
         permis_recto: "",
         permis_verso: "",
       });
+      setNewSessionUserFiles({
+        scanPermisRecto: null,
+        scanPermisVerso: null,
+        scanIdentiteRecto: null,
+        scanIdentiteVerso: null,
+      });
       await fetchSessionUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleMarkAsPaid = async (id: number) => {
     try {
-      const response = await fetch(`/api/session-users`, {
+      const response = await fetch(`/api/session-users/mark-as-paid`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, isPaid: true }),
+        body: JSON.stringify({ id }), // On envoie uniquement l'ID
       });
-
-      if (!response.ok) throw new Error("Erreur lors de la mise à jour du paiement");
-
-      const updatedSessionUser: SessionUser = await response.json();
-      setSessionUsers(sessionUsers.map((su) => (su.id === id ? updatedSessionUser : su)));
-      await fetchSessionUsers(); // Rafraîchir pour obtenir l'attestation si générée
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la mise à jour du paiement");
+      }
+  
+      await fetchSessionUsers(); // Recharge les données pour refléter les changements
+      await fetchSessions(); // Recharge les sessions pour mettre à jour la capacité affichée
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     }
@@ -164,15 +314,63 @@ export default function SessionsPage() {
     setNewSessionUser((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: string, isEditMode: boolean = false) => {
+    const file = e.target.files?.[0] || null;
+    if (isEditMode) {
+      setEditFormFiles((prev) => ({ ...prev, [field]: file }));
+    } else {
+      setNewSessionUserFiles((prev) => ({ ...prev, [field]: file }));
+    }
+  };
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting || !selectedSessionUser) return;
+    setIsSubmitting(true);
+    try {
+      if (modalMode === "edit") {
+        const uploadedPaths = await uploadFilesToSupabase(selectedSessionUser.user.id.toString(), editFormFiles);
+  
+        const updatedData = {
+          ...editFormData,
+          sessionId: parseInt(editFormData.sessionId),
+          id_recto: uploadedPaths.id_recto || editFormData.id_recto,
+          id_verso: uploadedPaths.id_verso || editFormData.id_verso,
+          permis_recto: uploadedPaths.permis_recto || editFormData.permis_recto,
+          permis_verso: uploadedPaths.permis_verso || editFormData.permis_verso,
+        };
+  
+        console.log("Données envoyées pour mise à jour :", updatedData);
+        await updateRegistration(selectedSessionUser.id, updatedData);
+        await fetchSessionUsers();
+        setShowRegistrationModal(false);
+      } else if (modalMode === "archive") {
+        console.log("Tentative de suppression pour l'ID :", selectedSessionUser.id);
+        await archiveRegistration(selectedSessionUser.id);
+        console.log("Suppression réussie");
+        await fetchSessionUsers();
+        setShowRegistrationModal(false);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la soumission :", error);
+      setError(error instanceof Error ? error.message : "Erreur inconnue lors de la soumission");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openModal = (mode: "edit" | "archive", sessionUser: SessionUser) => {
     setModalMode(mode);
     setSelectedSessionUser(sessionUser);
     setShowRegistrationModal(true);
-  };
-
-  const handleModalSubmit = async () => {
-    await fetchSessionUsers();
-    setShowRegistrationModal(false);
+    if (mode === "edit" && stageList.length === 0) {
+      fetchStages(); // Re-fetch si la liste est vide
+    }
   };
 
   if (loading) return <div>Chargement...</div>;
@@ -184,10 +382,10 @@ export default function SessionsPage() {
         <h2 className="text-xl font-semibold">Liste des Inscriptions</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+          title="Ajouter une inscription"
         >
-          <PlusCircleIcon className="w-5 h-5 mr-2" />
-          Ajouter une inscription
+          <PlusCircleIcon className="w-6 h-6" />
         </button>
       </div>
       <ul className="space-y-4">
@@ -195,41 +393,26 @@ export default function SessionsPage() {
           sessionUsers.map((sessionUser) => (
             <li key={sessionUser.id} className="border-b pb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Section 1 : Informations personnelles */}
                 <div>
-                 
                   {sessionUser.user ? (
                     <>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium"></span> {sessionUser.user.prenom} {sessionUser.user.nom}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium"></span> {sessionUser.user.email}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium"></span> {sessionUser.user.telephone}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Numéro Permis:</span> {sessionUser.user.numeroPermis}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium"></span> {sessionUser.user.casStage}
-                      </div>
+                      <div className="text-sm text-gray-600">{sessionUser.user.prenom} {sessionUser.user.nom}</div>
+                      <div className="text-sm text-gray-600">{sessionUser.user.email}</div>
+                      <div className="text-sm text-gray-600">{sessionUser.user.telephone}</div>
+                      <div className="text-sm text-gray-600"><span className="font-medium">Numéro Permis:</span> {sessionUser.user.numeroPermis}</div>
+                      <div className="text-sm text-gray-600">{sessionUser.user.casStage}</div>
                     </>
                   ) : (
                     <div className="text-sm text-red-600">Données utilisateur manquantes</div>
                   )}
                 </div>
-
-                {/* Section 2 : Informations de session et documents */}
                 <div>
                   {sessionUser.user ? (
                     <>
                       <div className="text-sm text-gray-600">
-                      
                         {sessionUser.session ? (
-                          <>  <div className="font-bold">  <div>{sessionUser.session.numeroStageAnts}</div></div>
-                         
+                          <>
+                            <div className="font-bold">{sessionUser.session.numeroStageAnts}</div>
                             <div>
                               Du {new Date(sessionUser.session.startDate).toLocaleDateString()} au{" "}
                               {new Date(sessionUser.session.endDate).toLocaleDateString()}
@@ -300,8 +483,6 @@ export default function SessionsPage() {
                   ) : null}
                 </div>
               </div>
-
-              {/* Boutons d'action */}
               <div className="flex justify-end space-x-2 mt-4">
                 {!sessionUser.isPaid && (
                   <button
@@ -314,12 +495,14 @@ export default function SessionsPage() {
                 <button
                   onClick={() => openModal("edit", sessionUser)}
                   className="p-2 text-gray-600 hover:text-blue-600"
+                  title="Modifier l'inscription"
                 >
                   <PencilIcon className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => openModal("archive", sessionUser)}
                   className="p-2 text-gray-600 hover:text-red-600"
+                  title="Archiver"
                 >
                   <TrashIcon className="w-4 h-4" />
                 </button>
@@ -462,46 +645,62 @@ export default function SessionsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Carte d’identité (recto)</label>
                   <input
-                    type="text"
-                    name="id_recto"
-                    value={newSessionUser.id_recto}
-                    onChange={handleInputChange}
-                    placeholder="URL du fichier"
+                    type="file"
+                    name="scanIdentiteRecto"
+                    onChange={(e) => handleFileChange(e, "scanIdentiteRecto")}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    accept="image/*,application/pdf"
                   />
+                  {newSessionUser.id_recto && (
+                    <a href={newSessionUser.id_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                      Voir le fichier uploadé
+                    </a>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Carte d’identité (verso)</label>
                   <input
-                    type="text"
-                    name="id_verso"
-                    value={newSessionUser.id_verso}
-                    onChange={handleInputChange}
-                    placeholder="URL du fichier"
+                    type="file"
+                    name="scanIdentiteVerso"
+                    onChange={(e) => handleFileChange(e, "scanIdentiteVerso")}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    accept="image/*,application/pdf"
                   />
+                  {newSessionUser.id_verso && (
+                    <a href={newSessionUser.id_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                      Voir le fichier uploadé
+                    </a>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Permis (recto)</label>
                   <input
-                    type="text"
-                    name="permis_recto"
-                    value={newSessionUser.permis_recto}
-                    onChange={handleInputChange}
-                    placeholder="URL du fichier"
+                    type="file"
+                    name="scanPermisRecto"
+                    onChange={(e) => handleFileChange(e, "scanPermisRecto")}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    accept="image/*,application/pdf"
                   />
+                  {newSessionUser.permis_recto && (
+                    <a href={newSessionUser.permis_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                      Voir le fichier uploadé
+                    </a>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Permis (verso)</label>
                   <input
-                    type="text"
-                    name="permis_verso"
-                    value={newSessionUser.permis_verso}
-                    onChange={handleInputChange}
-                    placeholder="URL du fichier"
+                    type="file"
+                    name="scanPermisVerso"
+                    onChange={(e) => handleFileChange(e, "scanPermisVerso")}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    accept="image/*,application/pdf"
                   />
+                  {newSessionUser.permis_verso && (
+                    <a href={newSessionUser.permis_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                      Voir le fichier uploadé
+                    </a>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end space-x-2">
@@ -514,7 +713,8 @@ export default function SessionsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                 >
                   Ajouter
                 </button>
@@ -524,14 +724,250 @@ export default function SessionsPage() {
         </div>
       )}
 
-      {/* Modal d'édition et d'archivage */}
-      <RegistrationModal
-        isOpen={showRegistrationModal}
-        onClose={() => setShowRegistrationModal(false)}
-        mode={modalMode}
-        registration={selectedSessionUser}
-        onSubmit={handleModalSubmit}
-      />
+      {/* Modal d'édition et d'archivage intégré */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 p-4 border-b">
+              <h3 className="text-lg font-semibold">{modalMode === "edit" ? "Modifier l'inscription" : "Archiver l'inscription"}</h3>
+              <button onClick={() => setShowRegistrationModal(false)} className="text-gray-500 hover:text-gray-700 text-xl">
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              {modalMode === "archive" ? (
+                <div>
+                  <p className="mb-4">Êtes-vous sûr de vouloir archiver cette inscription ?</p>
+                  <p className="font-medium mb-6">
+                    {selectedSessionUser?.user.prenom} {selectedSessionUser?.user.nom} - Session{" "}
+                    {selectedSessionUser?.session?.numeroStageAnts}
+                  </p>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => setShowRegistrationModal(false)}
+                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleModalSubmit}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400"
+                    >
+                      Archiver
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleModalSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Nom</label>
+                      <input
+                        type="text"
+                        name="nom"
+                        value={editFormData.nom}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Prénom</label>
+                      <input
+                        type="text"
+                        name="prenom"
+                        value={editFormData.prenom}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={editFormData.email}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Téléphone</label>
+                      <input
+                        type="text"
+                        name="telephone"
+                        value={editFormData.telephone}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Numéro de Permis</label>
+                      <input
+                        type="text"
+                        name="numeroPermis"
+                        value={editFormData.numeroPermis}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date de Délivrance</label>
+                      <input
+                        type="date"
+                        name="dateDelivrancePermis"
+                        value={editFormData.dateDelivrancePermis}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Préfecture</label>
+                      <input
+                        type="text"
+                        name="prefecture"
+                        value={editFormData.prefecture}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">État du Permis</label>
+                      <select
+                        name="etatPermis"
+                        value={editFormData.etatPermis}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="" disabled>Sélectionnez un état</option>
+                        <option value="Valide">Valide</option>
+                        <option value="Suspendu">Suspendu</option>
+                        <option value="Annulé">Annulé</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Cas de Stage</label>
+                      <input
+                        type="text"
+                        name="casStage"
+                        value={editFormData.casStage}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Session</label>
+                      <select
+                        name="sessionId"
+                        value={editFormData.sessionId}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="" disabled>Sélectionnez une session</option>
+                        {stageList.length > 0 ? (
+                          stageList.map((stage) => (
+                            <option key={stage.id} value={stage.id}>
+                              {stage.numeroStageAnts}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>Chargement des stages...</option>
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Carte d’identité (recto)</label>
+                      <input
+                        type="file"
+                        name="scanIdentiteRecto"
+                        onChange={(e) => handleFileChange(e, "scanIdentiteRecto", true)}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        accept="image/*,application/pdf"
+                      />
+                      {editFormData.id_recto && (
+                        <a href={editFormData.id_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                          Voir le fichier actuel
+                        </a>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Carte d’identité (verso)</label>
+                      <input
+                        type="file"
+                        name="scanIdentiteVerso"
+                        onChange={(e) => handleFileChange(e, "scanIdentiteVerso", true)}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        accept="image/*,application/pdf"
+                      />
+                      {editFormData.id_verso && (
+                        <a href={editFormData.id_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                          Voir le fichier actuel
+                        </a>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Permis (recto)</label>
+                      <input
+                        type="file"
+                        name="scanPermisRecto"
+                        onChange={(e) => handleFileChange(e, "scanPermisRecto", true)}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        accept="image/*,application/pdf"
+                      />
+                      {editFormData.permis_recto && (
+                        <a href={editFormData.permis_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                          Voir le fichier actuel
+                        </a>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Permis (verso)</label>
+                      <input
+                        type="file"
+                        name="scanPermisVerso"
+                        onChange={(e) => handleFileChange(e, "scanPermisVerso", true)}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        accept="image/*,application/pdf"
+                      />
+                      {editFormData.permis_verso && (
+                        <a href={editFormData.permis_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                          Voir le fichier actuel
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-6 space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowRegistrationModal(false)}
+                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

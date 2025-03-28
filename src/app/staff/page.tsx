@@ -134,13 +134,14 @@ const StaffPage: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
         <button
           onClick={() => openModal("create", staffType)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+
         >
-          <PlusCircleIcon className="w-5 h-5 mr-2" />
-          {`Nouveau ${
-            staffType === "instructor" ? "instructeur" : "psychologue"
+  <PlusCircleIcon className="w-6 h-6" />
+            {`Ajouter ${
+            staffType === "instructor" ? "un BAFM" : "un psychologue"
           }`}
-        </button>
+        </button>    
       </div>
 
       {staffList.length > 0 ? (

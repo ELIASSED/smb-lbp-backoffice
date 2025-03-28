@@ -3,10 +3,83 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { FaBars, FaTimes, FaChalkboardTeacher, FaUsers, FaClipboardList } from "react-icons/fa";
+import { useSession, signOut } from "next-auth/react";
+import { 
+  FaBars, 
+  FaTimes, 
+  FaChalkboardTeacher, 
+  FaUsers, 
+  FaClipboardList, 
+  FaSignOutAlt,
+  FaSignInAlt 
+} from "react-icons/fa";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+
+  const handleLogout = () => {
+    signOut({ 
+      callbackUrl: '/auth/login',
+      redirect: true 
+    });
+    setMenuOpen(false);
+  };
+
+  // Composant de navigation partagé pour desktop et mobile
+  const NavigationLinks = ({ isMobile = false }) => {
+    if (status !== "authenticated") {
+      return (
+        <Link 
+          href="/auth/login" 
+          className={`flex items-center space-x-3 text-lg font-semibold text-gray-dark px-4 py-3 rounded-lg hover:bg-yellow-dark hover:text-white transition duration-300 ${isMobile ? 'w-full' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <FaSignInAlt />
+          <span>Connexion</span>
+        </Link>
+      );
+    }
+
+    return (
+      <>
+        <NavItem 
+          href="/sessions" 
+          icon={<FaChalkboardTeacher />} 
+          label="Sessions" 
+          onClick={() => setMenuOpen(false)} 
+        />
+        <NavItem 
+          href="/staff" 
+          icon={<FaUsers />} 
+          label="Staff" 
+          onClick={() => setMenuOpen(false)} 
+        />
+        <NavItem 
+          href="/inscriptions" 
+          icon={<FaClipboardList />} 
+          label="Inscriptions" 
+          onClick={() => setMenuOpen(false)} 
+        />
+        
+        {/* Bouton de déconnexion */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-3 text-lg font-semibold text-gray-dark px-4 py-3 rounded-lg hover:bg-red-600 hover:text-white transition duration-300 w-full text-left"
+        >
+          <FaSignOutAlt />
+          <span>Déconnexion</span>
+        </button>
+
+        {/* Affichage du nom d'utilisateur */}
+        {session?.user?.name && (
+          <div className="px-4 py-2 text-sm text-gray-600 italic">
+            Connecté : {session.user.name}
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <>
@@ -25,9 +98,7 @@ export default function Header() {
 
         {/* Navigation Desktop */}
         <nav className="flex flex-col space-y-6 w-full">
-          <NavItem href="/sessions" icon={<FaChalkboardTeacher />} label="Sessions" />
-          <NavItem href="/staff" icon={<FaUsers />} label="Staff" />
-          <NavItem href="/inscriptions" icon={<FaClipboardList />} label="Inscriptions" />
+          <NavigationLinks />
         </nav>
       </aside>
 
@@ -67,9 +138,7 @@ export default function Header() {
 
         {/* Navigation Mobile */}
         <nav className="flex flex-col space-y-6 w-full px-6">
-          <NavItem href="/sessions" icon={<FaChalkboardTeacher />} label="Sessions" onClick={() => setMenuOpen(false)} />
-          <NavItem href="/staff" icon={<FaUsers />} label="Staff" onClick={() => setMenuOpen(false)} />
-          <NavItem href="/inscriptions" icon={<FaClipboardList />} label="Inscriptions" onClick={() => setMenuOpen(false)} />
+          <NavigationLinks isMobile={true} />
         </nav>
       </div>
     </>
@@ -77,7 +146,12 @@ export default function Header() {
 }
 
 // Composant pour les liens de navigation
-const NavItem = ({ href, icon, label, onClick }: { href: string; icon: JSX.Element; label: string; onClick?: () => void }) => (
+const NavItem = ({ href, icon, label, onClick }: { 
+  href: string; 
+  icon: JSX.Element; 
+  label: string; 
+  onClick?: () => void 
+}) => (
   <Link
     href={href}
     onClick={onClick}

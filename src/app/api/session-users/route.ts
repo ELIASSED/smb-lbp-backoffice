@@ -64,80 +64,141 @@ export async function GET() {
   }
 }
 
+
+type SessionUserRequest = {
+  civilite: string;
+  nom: string;
+  prenom: string;
+  prenom1?: string;
+  prenom2?: string;
+  adresse: string;
+  codePostal: string;
+  ville: string;
+  telephone: string;
+  email: string;
+  nationalite: string;
+  dateNaissance: string;
+  codePostalNaissance: string;
+  numeroPermis: string;
+  dateDelivrancePermis: string;
+  prefecture: string;
+  etatPermis: string;
+  casStage: string;
+  sessionId: number;
+  id_recto?: string;
+  id_verso?: string;
+  permis_recto?: string;
+  permis_verso?: string;
+};
+
 export async function POST(request: Request) {
-  const {
-    civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
-    nationalite, dateNaissance, codePostalNaissance, numeroPermis,
-    dateDelivrancePermis, prefecture, etatPermis, casStage, sessionId,
-    id_recto, id_verso, permis_recto, permis_verso,
-  } = await request.json();
-
   try {
-    const newUser = await prisma.user.create({
-      data: {
-        civilite, nom, prenom, adresse, codePostal, ville, telephone, email,
-        nationalite, dateNaissance: new Date(dateNaissance), codePostalNaissance,
-        numeroPermis, dateDelivrancePermis: new Date(dateDelivrancePermis),
-        prefecture, etatPermis, casStage,
-        id_recto, id_verso, permis_recto, permis_verso,
-      },
-    });
+    const data = (await request.json()) as SessionUserRequest;
+    console.log('📥 Requête reçue dans /api/session-users :', data);
 
-    const sessionUser = await prisma.sessionUsers.create({
-      data: {
-        sessionId: Number(sessionId),
-        userId: newUser.id,
-        isPaid: false,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nom: true,
-            prenom: true,
-            email: true,
-            telephone: true,
-            numeroPermis: true,
-            dateDelivrancePermis: true,
-            prefecture: true,
-            etatPermis: true,
-            casStage: true,
-            id_recto: true,
-            id_verso: true,
-            permis_recto: true,
-            permis_verso: true,
-            attestationPdf: true,
-          },
-        },
-        session: {
-          select: {
-            id: true,
-            numeroStageAnts: true,
-            location: true,
-            startDate: true,
-            endDate: true,
-          },
-        },
-      },
-    });
+    if (!data || !data.sessionId) {
+      console.log('⚠️ Données invalides détectées.');
+      return NextResponse.json({ error: 'Données invalides.' }, { status: 400 });
+    }
 
-    const formattedSessionUser = {
-      ...sessionUser,
-      user: {
-        ...sessionUser.user,
-        attestationPdfUrl: sessionUser.user.attestationPdf
-          ? `/api/attestations?userId=${sessionUser.user.id}`
-          : null,
-      },
+    const requiredFields = [
+      'civilite',
+      'nom',
+      'prenom',
+      'adresse',
+      'codePostal',
+      'ville',
+      'telephone',
+      'email',
+      'nationalite',
+      'dateNaissance',
+      'codePostalNaissance',
+      'numeroPermis',
+      'dateDelivrancePermis',
+      'prefecture',
+      'etatPermis',
+      'casStage',
+    ] as const;
+    const missingFields = requiredFields.filter((field) => !data[field]);
+    if (missingFields.length > 0) {
+      console.log('⚠️ Champs manquants :', missingFields);
+      return NextResponse.json(
+        { error: `Champs obligatoires manquants : ${missingFields.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = data.email.toLowerCase().trim();
+    const normalizedUserData = {
+      civilite: data.civilite,
+      nom: data.nom,
+      prenom: data.prenom,
+      prenom1: data.prenom1 || null,
+      prenom2: data.prenom2 || null,
+      adresse: data.adresse,
+      codePostal: data.codePostal,
+      ville: data.ville,
+      telephone: data.telephone,
+      email: normalizedEmail,
+      nationalite: data.nationalite,
+      dateNaissance: new Date(data.dateNaissance),
+      codePostalNaissance: data.codePostalNaissance,
+      numeroPermis: data.numeroPermis,
+      dateDelivrancePermis: new Date(data.dateDelivrancePermis),
+      prefecture: data.prefecture,
+      etatPermis: data.etatPermis,
+      casStage: data.casStage,
+      id_recto: data.id_recto || null,
+      id_verso: data.id_verso || null,
+      permis_recto: data.permis_recto || null,
+      permis_verso: data.permis_verso || null,
     };
 
-    return NextResponse.json(formattedSessionUser, { status: 201 });
-  } catch (error) {
-    console.error("Erreur lors de la création de l'inscription:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de la création de l'inscription." },
-      { status: 500 }
-    );
+    console.log('🔍 Vérification de la session avec sessionId :', data.sessionId);
+    const session = await prisma.session.findUnique({ where: { id: data.sessionId } });
+    if (!session) {
+      console.log('⚠️ Session non trouvée pour sessionId :', data.sessionId);
+      return NextResponse.json({ error: 'La session n’existe pas.' }, { status: 404 });
+    }
+    if (session.capacity <= 0) {
+      console.log('⚠️ Capacité insuffisante pour sessionId :', data.sessionId);
+      return NextResponse.json({ error: 'Plus de places disponibles.' }, { status: 400 });
+    }
+
+    console.log('🔄 Upsert de l’utilisateur avec email :', normalizedEmail);
+    const user = await prisma.user.upsert({
+      where: { email: normalizedEmail },
+      update: normalizedUserData,
+      create: normalizedUserData,
+    });
+
+    console.log('🔄 Transaction pour SessionUsers...');
+    const sessionUser = await prisma.$transaction(async (tx) => {
+      const existingBySessionId = await tx.sessionUsers.findUnique({
+        where: { sessionId_userId: { sessionId: data.sessionId, userId: user.id } },
+      });
+      if (existingBySessionId) {
+        throw new Error('Cet utilisateur est déjà inscrit à cette session.');
+      }
+
+      return tx.sessionUsers.create({
+        data: {
+          sessionId: data.sessionId,
+          userId: user.id,
+        },
+      });
+    });
+
+    console.log('✅ Inscription réussie pour l’utilisateur :', user.id);
+    return NextResponse.json({
+      message: 'Utilisateur inscrit avec succès.',
+      user,
+      sessionUser,
+    });
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    console.error('❌ Erreur dans /api/session-users :', errMessage, error instanceof Error ? error.stack : '');
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

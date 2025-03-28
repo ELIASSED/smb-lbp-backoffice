@@ -111,11 +111,11 @@ const BackofficeStageList: React.FC = () => {
         <h2 className="text-xl font-bold">Gestion des Stages</h2>
         <button
           onClick={() => openModal("create")}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"         
+           title="Ajouter un nouveau stage"
         >
-          <PlusCircleIcon className="w-4 h-4 mr-2" />
-          Nouveau Stage
-        </button>
+          <PlusCircleIcon className="w-6 h-6" />
+    </button>  
       </div>
 
       {loading ? (
@@ -175,6 +175,7 @@ const BackofficeStageList: React.FC = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => openModal("edit", stage)}
+                             title="Modifier le stage"
                           className="p-2 text-gray-600 hover:text-blue-600"
                         >
                           <PencilIcon className="w-4 h-4" />

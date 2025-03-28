@@ -8,6 +8,15 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   id                   Int            @id @default(autoincrement())
   civilite             String
@@ -19,7 +28,7 @@ model User {
   codePostal           String
   ville                String
   telephone            String
-  email                String         @unique
+  email                String
   nationalite          String
   dateNaissance        DateTime
   codePostalNaissance  String
@@ -38,17 +47,18 @@ model User {
 }
 
 model SessionUsers {
-  id         Int       @id @default(autoincrement())
-  sessionId  Int
-  userId     Int
-  isPaid     Boolean   @default(false) // Déplacé ici depuis User
-  isArchived Boolean   @default(false)
-  paymentIntentId String?  @unique
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  payments   Payment[]
-  session    Session   @relation(fields: [sessionId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  id              Int       @id @default(autoincrement())
+  sessionId       Int
+  userId          Int
+  isPaid          Boolean   @default(false)
+  isArchived      Boolean   @default(false)
+  paymentIntentId String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  payments        Payment[]
+  session         Session   @relation(fields: [sessionId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+
   @@unique([sessionId, userId])
 }
 

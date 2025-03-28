@@ -1,4 +1,16 @@
 -- CreateTable
+CREATE TABLE "Admin" (
+    "id" SERIAL NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "name" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Admin_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "civilite" TEXT NOT NULL,
@@ -48,10 +60,10 @@ CREATE TABLE "Session" (
     "id" SERIAL NOT NULL,
     "numeroStageAnts" TEXT NOT NULL,
     "price" DOUBLE PRECISION NOT NULL DEFAULT 200.0,
-    "description" TEXT NOT NULL,
+    "description" TEXT,
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
-    "location" TEXT NOT NULL,
+    "location" TEXT,
     "capacity" INTEGER NOT NULL DEFAULT 20,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -104,7 +116,7 @@ CREATE TABLE "Payment" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "Admin_email_key" ON "Admin"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SessionUsers_paymentIntentId_key" ON "SessionUsers"("paymentIntentId");

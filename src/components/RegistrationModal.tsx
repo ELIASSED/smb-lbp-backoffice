@@ -142,6 +142,30 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Fonction pour uploader un fichier et mettre à jour l'URL correspondante
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormData) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de l'upload du fichier");
+
+      const { url } = await response.json();
+      setFormData((prev) => ({ ...prev, [field]: url }));
+    } catch (error) {
+      console.error("Erreur lors de l'upload:", error);
+      alert("Erreur lors de l'upload du fichier.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -314,42 +338,62 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
           <div>
             <label className="block text-sm font-medium mb-1">Carte d’identité (recto)</label>
             <input
-              type="text"
+              type="file"
               name="id_recto"
-              value={formData.id_recto}
-              onChange={handleChange}
+              onChange={(e) => handleFileUpload(e, "id_recto")}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept="image/*,application/pdf"
             />
+            {formData.id_recto && (
+              <a href={formData.id_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                Voir le fichier uploadé
+              </a>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Carte d’identité (verso)</label>
             <input
-              type="text"
+              type="file"
               name="id_verso"
-              value={formData.id_verso}
-              onChange={handleChange}
+              onChange={(e) => handleFileUpload(e, "id_verso")}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept="image/*,application/pdf"
             />
+            {formData.id_verso && (
+              <a href={formData.id_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                Voir le fichier uploadé
+              </a>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Permis (recto)</label>
             <input
-              type="text"
+              type="file"
               name="permis_recto"
-              value={formData.permis_recto}
-              onChange={handleChange}
+              onChange={(e) => handleFileUpload(e, "permis_recto")}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept="image/*,application/pdf"
             />
+            {formData.permis_recto && (
+              <a href={formData.permis_recto} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                Voir le fichier uploadé
+              </a>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Permis (verso)</label>
             <input
-              type="text"
+              type="file"
               name="permis_verso"
-              value={formData.permis_verso}
-              onChange={handleChange}
+              onChange={(e) => handleFileUpload(e, "permis_verso")}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept="image/*,application/pdf"
             />
+            {formData.permis_verso && (
+              <a href={formData.permis_verso} target="_blank" className="text-blue-600 hover:underline mt-1 block">
+                Voir le fichier uploadé
+              </a>
+            )}
           </div>
         </div>
         <div className="flex justify-end mt-6">
