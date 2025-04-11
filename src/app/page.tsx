@@ -9,6 +9,7 @@ import {
   FaUsers,
   FaEuroSign,
   FaPlusCircle,
+  FaSpinner
 } from "react-icons/fa";
 
 interface Earnings {
@@ -55,17 +56,21 @@ export default function DashboardPage() {
   }, [status]);
 
   if (status === "loading") {
-    return <div>Chargement...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <FaSpinner className="animate-spin text-yellow-500 text-4xl" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 p-4 md:p-8">
-      <header className="bg-yellow-500 text-white p-6 shadow-lg rounded-lg text-center md:text-left">
-        <h1 className="text-3xl md:text-4xl font-bold">Tableau de Bord</h1>
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <header className="bg-yellow-500 text-white p-4 md:p-6 shadow-lg rounded-lg text-center md:text-left mb-6">
+        <h1 className="text-2xl md:text-4xl font-bold">Tableau de Bord</h1>
         <p className="mt-1 text-gray-100">Gérez vos sessions et vos données facilement</p>
       </header>
 
-      <main className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <DashboardCard
           icon={<FaChalkboardTeacher />}
           title="Sessions"
@@ -78,21 +83,26 @@ export default function DashboardPage() {
           description="Instructeurs et psychologues"
           onClick={() => router.push("/staff")}
         />
-        <EarningsCard earnings={earnings} loading={loading} error={error} onClick={() => router.push("/")} />
+        <EarningsCard 
+          earnings={earnings} 
+          loading={loading} 
+          error={error} 
+          onClick={() => router.push("/")} 
+        />
       </main>
 
-      <section className="bg-white shadow-lg rounded-lg p-6 mt-6 text-center">
-        <h2 className="text-2xl font-bold text-teal-600">Actions rapides</h2>
+      <section className="bg-white shadow-lg rounded-lg p-4 md:p-6 mt-6 text-center">
+        <h2 className="text-xl md:text-2xl font-bold text-teal-600">Actions rapides</h2>
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
           <ActionButton
             icon={<FaPlusCircle />}
             text="Ajouter une session"
-            onClick={() => router.push("/sessions")}
+            onClick={() => router.push("/sessions/create")}
           />
           <ActionButton
             icon={<FaPlusCircle />}
             text="Ajouter un BAFM/Psychologue"
-            onClick={() => router.push("/staff")}
+            onClick={() => router.push("/staff/create")}
           />
         </div>
       </section>
@@ -103,11 +113,11 @@ export default function DashboardPage() {
 
 const DashboardCard = ({ icon, title, description, onClick }: any) => (
   <div
-    className="bg-white p-6 rounded-lg shadow-lg hover:bg-yellow-400 hover:text-white transition duration-300 cursor-pointer text-center md:text-left"
+    className="bg-white p-4 md:p-6 rounded-lg shadow-lg hover:bg-yellow-400 hover:text-white transition duration-300 cursor-pointer text-center md:text-left"
     onClick={onClick}
   >
     <div className="text-3xl flex justify-center md:justify-start">{icon}</div>
-    <h3 className="text-xl font-semibold mt-4">{title}</h3>
+    <h3 className="text-lg md:text-xl font-semibold mt-4">{title}</h3>
     <p className="text-sm">{description}</p>
   </div>
 );
@@ -124,24 +134,30 @@ const EarningsCard = ({
   onClick: () => void;
 }) => {
   let content;
-  if (loading) content = <p>Chargement...</p>;
-  else if (error) content = <p>Erreur: {error}</p>;
-  else if (earnings) {
+  if (loading) {
+    content = (
+      <div className="flex justify-center items-center py-4">
+        <FaSpinner className="animate-spin text-2xl" />
+      </div>
+    );
+  } else if (error) {
+    content = <p className="text-red-500 text-sm">{error}</p>;
+  } else if (earnings) {
     content = (
       <div className="space-y-1">
-        <p className="text-lg">
+        <p className="text-sm md:text-lg">
           Jour:{" "}
           <span className="font-bold">
             {(earnings.day / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
           </span>
         </p>
-        <p className="text-lg">
+        <p className="text-sm md:text-lg">
           Semaine:{" "}
           <span className="font-bold">
             {(earnings.week / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
           </span>
         </p>
-        <p className="text-lg">
+        <p className="text-sm md:text-lg">
           Mois:{" "}
           <span className="font-bold">
             {(earnings.month / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
@@ -149,17 +165,19 @@ const EarningsCard = ({
         </p>
       </div>
     );
-  } else content = <p>Aucune donnée</p>;
+  } else {
+    content = <p className="text-gray-500">Aucune donnée</p>;
+  }
 
   return (
     <div
-      className="bg-white p-6 rounded-lg shadow-lg hover:bg-yellow-400 hover:text-white transition duration-300 cursor-pointer text-center md:text-left"
+      className="bg-white p-4 md:p-6 rounded-lg shadow-lg hover:bg-yellow-400 hover:text-white transition duration-300 cursor-pointer text-center md:text-left"
       onClick={onClick}
     >
       <div className="text-3xl flex justify-center md:justify-start">
         <FaEuroSign />
       </div>
-      <h3 className="text-xl font-semibold mt-4">Revenus en cours</h3>
+      <h3 className="text-lg md:text-xl font-semibold mt-4">Revenus en cours</h3>
       <div className="mt-2">{content}</div>
     </div>
   );
@@ -168,9 +186,9 @@ const EarningsCard = ({
 const ActionButton = ({ icon, text, onClick }: any) => (
   <button
     onClick={onClick}
-    className="flex items-center space-x-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-500 transition duration-300"
+    className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 md:px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-500 transition duration-300"
   >
     <span className="text-xl">{icon}</span>
-    <span>{text}</span>
+    <span className="whitespace-nowrap">{text}</span>
   </button>
 );

@@ -102,22 +102,9 @@ export async function POST(request: Request) {
     }
 
     const requiredFields = [
-      'civilite',
-      'nom',
-      'prenom',
-      'adresse',
-      'codePostal',
-      'ville',
-      'telephone',
-      'email',
-      'nationalite',
-      'dateNaissance',
-      'codePostalNaissance',
-      'numeroPermis',
-      'dateDelivrancePermis',
-      'prefecture',
-      'etatPermis',
-      'casStage',
+      'civilite', 'nom', 'prenom', 'adresse', 'codePostal', 'ville', 'telephone',
+      'email', 'nationalite', 'dateNaissance', 'codePostalNaissance', 'numeroPermis',
+      'dateDelivrancePermis', 'prefecture', 'etatPermis', 'casStage',
     ] as const;
     const missingFields = requiredFields.filter((field) => !data[field]);
     if (missingFields.length > 0) {
@@ -129,30 +116,7 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = data.email.toLowerCase().trim();
-    const normalizedUserData = {
-      civilite: data.civilite,
-      nom: data.nom,
-      prenom: data.prenom,
-      prenom1: data.prenom1 || null,
-      prenom2: data.prenom2 || null,
-      adresse: data.adresse,
-      codePostal: data.codePostal,
-      ville: data.ville,
-      telephone: data.telephone,
-      email: normalizedEmail,
-      nationalite: data.nationalite,
-      dateNaissance: new Date(data.dateNaissance),
-      codePostalNaissance: data.codePostalNaissance,
-      numeroPermis: data.numeroPermis,
-      dateDelivrancePermis: new Date(data.dateDelivrancePermis),
-      prefecture: data.prefecture,
-      etatPermis: data.etatPermis,
-      casStage: data.casStage,
-      id_recto: data.id_recto || null,
-      id_verso: data.id_verso || null,
-      permis_recto: data.permis_recto || null,
-      permis_verso: data.permis_verso || null,
-    };
+    const normalizedUserData = { /* ... idem ... */ };
 
     console.log('🔍 Vérification de la session avec sessionId :', data.sessionId);
     const session = await prisma.session.findUnique({ where: { id: data.sessionId } });
@@ -165,15 +129,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Plus de places disponibles.' }, { status: 400 });
     }
 
-    console.log('🔄 Upsert de l’utilisateur avec email :', normalizedEmail);
-    const user = await prisma.user.upsert({
-      where: { email: normalizedEmail },
-      update: normalizedUserData,
-      create: normalizedUserData,
-    });
-
-    console.log('🔄 Transaction pour SessionUsers...');
     const sessionUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.upsert({
+        where: { email: normalizedEmail },
+        update: normalizedUserData,
+        create: normalizedUserData,
+      });
+
       const existingBySessionId = await tx.sessionUsers.findUnique({
         where: { sessionId_userId: { sessionId: data.sessionId, userId: user.id } },
       });
@@ -181,18 +143,24 @@ export async function POST(request: Request) {
         throw new Error('Cet utilisateur est déjà inscrit à cette session.');
       }
 
-      return tx.sessionUsers.create({
+      const newSessionUser = await tx.sessionUsers.create({
         data: {
           sessionId: data.sessionId,
           userId: user.id,
         },
       });
+
+      await tx.session.update({
+        where: { id: data.sessionId },
+        data: { capacity: { decrement: 1 } },
+      });
+
+      return newSessionUser;
     });
 
-    console.log('✅ Inscription réussie pour l’utilisateur :', user.id);
+    console.log('✅ Inscription réussie pour l’utilisateur :', sessionUser.userId);
     return NextResponse.json({
       message: 'Utilisateur inscrit avec succès.',
-      user,
       sessionUser,
     });
   } catch (error: unknown) {

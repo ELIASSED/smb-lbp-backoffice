@@ -10,21 +10,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Fonction pour login automatique
-  const handleAutoLogin = async () => {
-    const result = await signIn("credentials", {
-      redirect: false,
-      email: "admin@example.com", // Remplace par un email valide
-      password: "password123",     // Remplace par un mot de passe valide
-    });
-
-    if (result?.error) {
-      setError(result.error);
-    } else {
-      router.push("/");
-    }
-  };
-
+  
   // Déclencher le login automatique au chargement (optionnel)
   useEffect(() => {
     // Décommente pour activer le login auto au chargement
