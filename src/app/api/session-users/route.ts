@@ -26,7 +26,9 @@ export async function GET() {
             id_verso: true,
             permis_recto: true,
             permis_verso: true,
-            attestationPdf: true, // Inclure le champ attestationPdf
+            attestationPdf: true,
+            letter_48N: true,
+            extraDocument: true,
           },
         },
         session: {
@@ -39,7 +41,6 @@ export async function GET() {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
 
     const formattedSessionUsers = sessionUsers.map((sessionUser) => ({

@@ -3,57 +3,35 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// GET: Récupérer toutes les sessions
-export async function GET(request: Request) {
-  const url = new URL(request.url);
 
-  // Paramètres de tri
-  const orderDate = url.searchParams.get("orderDate") === "desc" ? "desc" : "asc";
-  const orderPrice = url.searchParams.get("orderPrice") === "desc" ? "desc" : "asc";
+export async function GET() {
   try {
     const sessions = await prisma.session.findMany({
-      where: {
-        isArchived: false, // Filtrage des sessions non archivées
-      },
       select: {
-        id:true,
-        price: true,
+        id: true,
         numeroStageAnts: true,
+        price: true,
         startDate: true,
         endDate: true,
+        location: true,
         capacity: true,
-        psychologue: {
-          select: {
-            // Remplacez ces propriétés par celles de votre modèle Psychologue
-            id: true,
-            firstName: true,
-            lastName: true,
-          
-          },
-        },
+        isArchived: true, // Critical: include isArchived
         instructor: {
-          select: {
-            id: true,
-            firstName: true, 
-            lastName: true,
-          },
+          select: { firstName: true, lastName: true },
         },
-      },  orderBy: [
-        { startDate: orderDate }, // Tri par date
-        { price: orderPrice },    // Tri par prix
-      ],
+        psychologue: {
+          select: { firstName: true, lastName: true },
+        },
+      },
     });
+
     return NextResponse.json(sessions);
   } catch (error) {
-    console.error('Erreur lors de la récupération des sessions:', error);
-    return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la récupération des sessions.' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error("Erreur GET /api/sessions:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+
 
 // POST: Créer une nouvelle session
 export async function POST(request: Request) {

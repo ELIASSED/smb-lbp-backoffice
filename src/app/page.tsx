@@ -146,19 +146,19 @@ const EarningsCard = ({
     content = (
       <div className="space-y-1">
         <p className="text-sm md:text-lg">
-          Jour:{" "}
+          Ces dernières 24 heures:{" "}
           <span className="font-bold">
             {(earnings.day / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
           </span>
         </p>
         <p className="text-sm md:text-lg">
-          Semaine:{" "}
+          Cette semaine:{" "}
           <span className="font-bold">
             {(earnings.week / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
           </span>
         </p>
         <p className="text-sm md:text-lg">
-          Mois:{" "}
+          Ces 30 derniers jours:{" "}
           <span className="font-bold">
             {(earnings.month / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
           </span>

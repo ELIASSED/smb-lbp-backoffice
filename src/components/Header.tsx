@@ -76,27 +76,28 @@ export default function Header() {
 
     return (
       <>
-        <NavItem 
-          href="/sessions" 
-          icon={<FaChalkboardTeacher />} 
-          label="Sessions" 
-          onClick={() => setMenuOpen(false)} 
-          isMobile={isMobile}
-        />
-        <NavItem 
-          href="/staff" 
-          icon={<FaUsers />} 
-          label="Staff" 
-          onClick={() => setMenuOpen(false)}
-          isMobile={isMobile}
-        />
-        <NavItem 
+              <NavItem 
           href="/inscriptions" 
           icon={<FaClipboardList />} 
           label="Inscriptions" 
           onClick={() => setMenuOpen(false)}
           isMobile={isMobile}
         />
+        <NavItem 
+          href="/sessions" 
+          icon={<FaChalkboardTeacher />} 
+          label="Stages" 
+          onClick={() => setMenuOpen(false)} 
+          isMobile={isMobile}
+        />
+        <NavItem 
+          href="/staff" 
+          icon={<FaUsers />} 
+          label="Animateurs" 
+          onClick={() => setMenuOpen(false)}
+          isMobile={isMobile}
+        />
+
         
         {/* Bouton de déconnexion */}
         <button
@@ -130,7 +131,7 @@ export default function Header() {
   return (
     <>
       {/* Sidebar Desktop */}
-      <aside className="hidden md:flex bg-yellow w-64 h-screen fixed top-0 left-0 flex-col items-center p-6 shadow-lg z-50">
+      <aside className="hidden md:flex bg-yellow w-56 h-screen fixed top-0 left-0 flex-col items-center p-6 shadow-lg z-50">
         {/* Logo */}
         <Link href="/" className="mb-8">
           <Image
@@ -177,7 +178,7 @@ export default function Header() {
       {/* Menu Mobile */}
       <div
         id="mobile-menu"
-        className={`md:hidden fixed top-0 left-0 w-64 h-full bg-yellow shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`md:hidden fixed top-0 left-0 w-56 h-full bg-yellow shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
           menuOpen ? "translate-x-0" : "-translate-x-full"
         } overflow-y-auto`}
       >

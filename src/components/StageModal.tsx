@@ -88,7 +88,7 @@ export const StageModal: React.FC<StageModalProps> = ({
         location: "",
         description: "",
         capacity: 20,
-        price: "199.0",
+        price: "220.0",
         startDate: "",
         endDate: "",
         instructorId: "",
@@ -228,7 +228,7 @@ export const StageModal: React.FC<StageModalProps> = ({
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            step="0.01"
+            step=""
           />
         </div>
         <div>

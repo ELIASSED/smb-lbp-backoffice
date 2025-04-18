@@ -43,6 +43,8 @@ export async function PUT(req: Request) {
         data: { capacity: { decrement: 1 } },
       });
 
+      
+
       return { updatedSessionUser, updatedSession };
     });
 

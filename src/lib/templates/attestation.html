@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Attestation de suivi de stage</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 8pt;
+            line-height: 1.6;
+            margin: 40px;
+        }
+        .letter-header {
+            text-align: right;
+            margin-bottom: 40px;
+        }
+        .company-info {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            font-size: 11pt;
+        }
+        .title {
+            text-align: center;
+            font-size: 11pt;
+            text-transform: uppercase;
+            margin: 180px 0 60px;
+            font-weight: bold;
+            padding: 0 10rem;
+        }
+        .content {
+            text-align: justify;
+        }
+       
+        .stagiaire-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stagiaire-info {
+            flex: 1;
+        }
+        .stagiaire-info p {
+            margin: 0px;
+        }
+        .stagiaire-info span {
+        
+            width: 180px;
+        }
+        .signature-block {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11pt;
+            
+        }
+        .signature-block div {
+            text-align: center;
+            width: 30%;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="company-info">
+        SMB LE BON POINT<br>
+        35 av Foch (entrée face au 2 avenue de Curti)<br>
+        94100 Saint-Maur-des-Fossés<br>
+        SIRET : 908244783600012
+    </div>
+    <div class="letter-header">
+        À SAINT-MAUR-DES-FOSSES,<br>
+        le {{dateAttestation}}
+    </div>
+    <div class="title">
+        Attestation de suivi de stage de sensibilisation à la sécurité routière
+    </div>
+    <div class="content">
+        <p>Je soussignée, SALIMA MAHOUR, Responsable de la formation spécifique, titulaire de l’Agrément Préfectoral n° R2209400050, atteste par la présente que :</p>
+        <div class="stagiaire-container">
+            <div class="stagiaire-info">
+                <p><span>Nom :</span> {{nom}}</p>
+                <p><span>Prénom :</span> {{prenom}}</p>
+                <p><span>Adresse :</span> {{adresse}}</p>
+                <p><span>Ville :</span> {{ville}}</p>
+                <p><span>Date de naissance :</span> {{dateNaissance}}</p>
+                <p><span>Lieu de naissance :</span> {{lieuNaissance}}</p>
+            </div>
+            <div class="stagiaire-info">
+                <p><span>Numéro de permis :</span> {{numeroPermis}}</p>
+                <p><span>Date délivrance permis :</span> {{datePermis}}</p>
+                <p><span>Préfecture de délivrance :</span> {{prefecturePermis}}</p>
+            </div>
+        </div>
+        <p>a suivi le stage de formation spécifique correspondant au cas visé ci-dessous, qui s’est déroulé les {{dateDebutStage}} et {{dateFinStage}} à l’adresse suivante : 35 Avenue Foch, 94100 Saint-Maur-des-Fossés.</p>
+        <p><strong>Cas de stage :</strong>{{casStage}}</p>
+    </div>
+    <div class="signature-block">
+        <div>
+            Signature du directeur<br>            
+            SALIMA MAHOUR<br>
+        </div>
+        <div>
+            <div></div>Signature des animateurs<br>
+      
+            BAFM<br>
+            {{animateur}}<br>            <br/>
+
+            Psychologue<br>
+            {{psychologue}}<br>
+        </div>
+        <div>
+            Signature du stagiaire<br>
+            {{prenom}} {{nom}}<br>
+        </div>
+    </div>
+</body>
+</html>

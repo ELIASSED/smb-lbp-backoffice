@@ -37,6 +37,8 @@ model User {
   id_verso             String?
   permis_recto         String?
   permis_verso         String?
+  letter_48N           String?
+  extraDocument        String?
   numeroPermis         String
   dateDelivrancePermis DateTime
   prefecture           String

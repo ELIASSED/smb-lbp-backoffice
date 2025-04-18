@@ -74,10 +74,10 @@ export const createSession = async (data: StageFormData): Promise<Stage> => {
 };
 
 export async function updateSession(id: number, data: StageFormData) {
-  const response = await fetch(`${API_URL}/${id}`, { // Inclure l'ID dans l'URL
+  const response = await fetch(`${API_URL}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data), // Pas besoin d'inclure l'ID ici, il est dans l'URL
+    body: JSON.stringify(data),
   });
 
   const text = await response.text();
@@ -91,6 +91,10 @@ export async function updateSession(id: number, data: StageFormData) {
 
 export const deleteSession = async (id: number): Promise<void> => {
   await fetchApi(`${API_URL}/${id}`, { method: "DELETE" });
+};
+
+export const unarchiveSession = async (id: number): Promise<void> => {
+  await fetchApi(`${API_URL}/${id}`, { method: "PATCH" });
 };
 
 export const getInstructors = async (): Promise<Instructor[]> => {

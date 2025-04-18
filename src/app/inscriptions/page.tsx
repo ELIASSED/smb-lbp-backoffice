@@ -1,36 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import { PencilIcon, TrashIcon, PlusCircleIcon, SearchIcon, FilterIcon } from "@heroicons/react/solid";
 import { createClient } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from "uuid";
 import Link from "next/link";
+import { FaCheckCircle, FaFilePdf, FaPencilAlt, FaTrash, FaFile, FaFileAlt, FaFileDownload } from 'react-icons/fa';
+import {User,FormData, SessionUser} from "@/services/sessionUserApi"
 
 // Types basés sur votre Prisma schema et API
 interface Session {
   id: number;
   numeroStageAnts: string;
-  location: string;
   startDate: string;
   endDate: string;
-  capacity: number;
-}
-
-interface User {
-  id: number;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  numeroPermis: string;
-  dateDelivrancePermis: string;
-  prefecture: string;
-  etatPermis: string;
-  casStage: string;
-  id_recto?: string;
-  id_verso?: string;
-  permis_recto?: string;
-  permis_verso?: string;
-  attestationPdf?: string;
 }
 
 interface SessionUser {
@@ -41,24 +22,7 @@ interface SessionUser {
   isArchived: boolean;
   createdAt: string;
   session: Session;
-  user: User & { attestationPdfUrl?: string };
-}
-
-interface FormData {
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  numeroPermis: string;
-  dateDelivrancePermis: string;
-  prefecture: string;
-  etatPermis: string;
-  casStage: string;
-  sessionId: string;
-  id_recto?: string;
-  id_verso?: string;
-  permis_recto?: string;
-  permis_verso?: string;
+  user: User;
 }
 
 // Initialisation de Supabase
@@ -78,6 +42,7 @@ const uploadFilesToSupabase = async (
     scanPermisVerso: "permis_verso",
     scanIdentiteRecto: "id_recto",
     scanIdentiteVerso: "id_verso",
+    scanletter_48N: "letter_48N",
   };
 
   for (const [field, dbField] of Object.entries(fileFields)) {
@@ -120,6 +85,298 @@ const Breadcrumbs = () => (
   </nav>
 );
 
+// Composant Tableau Excel-like
+interface SortConfig {
+  key: keyof SessionUser | string;
+  direction: 'asc' | 'desc' | null;
+}
+
+const SessionUsersTable: React.FC<{
+  filteredSessionUsers: SessionUser[];
+  downloadAttestation: (url: string, nom: string, prenom: string) => void;
+  handleGenerateAttestation: (sessionId: number, userId: number, nom: string, prenom: string) => void;
+  handleMarkAsPaid: (sessionUserId: number) => void;
+  openEditModal: (sessionUser: SessionUser) => void;
+  handleArchiveSessionUser: (sessionUserId: number) => void;
+  isSubmitting: boolean;
+}> = ({
+  filteredSessionUsers,
+  downloadAttestation,
+  handleGenerateAttestation,
+  handleMarkAsPaid,
+  openEditModal,
+  handleArchiveSessionUser,
+  isSubmitting,
+}) => {
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'user.nom', direction: null });
+
+  const handleSort = (key: keyof SessionUser | string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+
+    const sortedUsers = [...filteredSessionUsers].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      if (key.includes('user.')) {
+        const field = key.split('.')[1];
+        aValue = a.user[field as keyof SessionUser['user']] ?? '';
+        bValue = b.user[field as keyof SessionUser['user']] ?? '';
+      } else if (key.includes('session.')) {
+        const field = key.split('.')[1];
+        aValue = a.session[field as keyof SessionUser['session']] ?? '';
+        bValue = b.session[field as keyof SessionUser['session']] ?? '';
+      } else {
+        aValue = a[key as keyof SessionUser] ?? '';
+        bValue = b[key as keyof SessionUser] ?? '';
+      }
+
+      if (aValue === null || aValue === undefined) return direction === 'asc' ? -1 : 1;
+      if (bValue === null || bValue === undefined) return direction === 'asc' ? 1 : -1;
+
+      if (typeof aValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue as string)
+          : bValue.localeCompare(aValue as string);
+      }
+
+      return direction === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
+
+    filteredSessionUsers = sortedUsers;
+    setSortConfig({ key, direction });
+  };
+
+  console.log('SessionUsers filtrés:', filteredSessionUsers);
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="h-[600px] overflow-y-auto">
+        <table className="min-w-full bg-white border border-gray-200">
+          <thead className="bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('user.prenom')}
+              >
+                Identité {sortConfig.key === 'user.prenom' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('session.numeroStageAnts')}
+              >
+                Numéro ANTS {sortConfig.key === 'session.numeroStageAnts' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('session.startDate')}
+              >
+                Dates {sortConfig.key === 'session.startDate' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('user.email')}
+              >
+                Email {sortConfig.key === 'user.email' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('user.telephone')}
+              >
+                Téléphone {sortConfig.key === 'user.telephone' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('user.numeroPermis')}
+              >
+                Numéro de permis {sortConfig.key === 'user.numeroPermis' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('user.casStage')}
+              >
+                Cas de stage {sortConfig.key === 'user.casStage' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('createdAt')}
+              >
+                Inscription {sortConfig.key === 'createdAt' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th
+                className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => handleSort('isPaid')}
+              >
+                Paiement {sortConfig.key === 'isPaid' && (sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : '')}
+              </th>
+              <th className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">Documents</th>
+              <th className="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSessionUsers.length ? (
+              filteredSessionUsers.map((su) => (
+                <tr key={su.id} className={`border-b hover:bg-gray-50 ${su.isPaid ? '' : 'opacity-80'}`}>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.user.prenom} {su.user.nom}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.session.numeroStageAnts}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">
+                    {new Date(su.session.startDate).toLocaleDateString()} -{' '}
+                    {new Date(su.session.endDate).toLocaleDateString()}
+                  </td>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.user.email}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.user.telephone}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.user.numeroPermis}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">{su.user.casStage}</td>
+                  <td className="py-2 px-4 text-sm text-gray-600">
+                    {new Date(su.createdAt).toLocaleString()}
+                  </td>
+                  <td className="py-2 px-4 text-sm text-gray-600">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        su.isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {su.isPaid ? 'Payé' : 'Non payé'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-4 text-sm text-gray-600">
+                    <div className="flex flex-wrap gap-2">
+                      {su.user.id_recto && (
+                        <a
+                          href={su.user.id_recto}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="ID recto"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> ID recto
+                        </a>
+                      )}
+                      {su.user.id_verso && (
+                        <a
+                          href={su.user.id_verso}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="ID verso"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> ID verso
+                        </a>
+                      )}
+                      {su.user.permis_recto && (
+                        <a
+                          href={su.user.permis_recto}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="Permis recto"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> Permis recto
+                        </a>
+                      )}
+                      {su.user.permis_verso && (
+                        <a
+                          href={su.user.permis_verso}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="Permis verso"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> Permis verso
+                        </a>
+                      )}
+                      {su.user.letter_48N && (
+                        <a
+                          href={su.user.letter_48N}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="Lettre 48N"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> Lettre 48N
+                        </a>
+                      )}
+                      {su.user.extraDocument && (
+                        <a
+                          href={su.user.extraDocument}
+                          target="_blank"
+                          className="text-blue-600 hover:underline flex items-center text-xs"
+                          title="Document supplémentaire"
+                        >
+                          <FaFile className="w-3 h-3 mr-1" /> Document supplémentaire
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-2 px-4 text-sm text-gray-600">
+                    <div className="flex gap-2">
+                      {su.user.attestationPdfUrl && (
+                        <button
+                          onClick={() => downloadAttestation(su.user.attestationPdfUrl!, su.user.nom, su.user.prenom)}
+                          className="p-1 text-blue-600 hover:text-blue-800"
+                          aria-label="Télécharger attestation"
+                          title="Télécharger attestation"
+                        >
+                          <FaFileDownload className="w-4 h-4" />
+                        </button>
+                      )}
+                      {su.isPaid ? (
+                        <button
+                          onClick={() =>
+                            handleGenerateAttestation(su.sessionId, su.userId, su.user.nom, su.user.prenom)
+                          }
+                          disabled={isSubmitting}
+                          className="p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                          aria-label="Générer attestation"
+                          title="Générer attestation"
+                        >
+                          <FaFilePdf className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleMarkAsPaid(su.id)}
+                          disabled={isSubmitting}
+                          className="p-1 text-green-600 hover:text-green-800 disabled:text-gray-400"
+                          aria-label="Marquer comme payé"
+                          title="Marquer comme payé"
+                        >
+                          <FaCheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEditModal(su)}
+                        className="p-1 text-gray-600 hover:text-blue-600"
+                        aria-label="Modifier"
+                        title="Modifier"
+                      >
+                        <FaPencilAlt className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleArchiveSessionUser(su.id)}
+                        disabled={isSubmitting}
+                        className="p-1 text-gray-600 hover:text-red-600 disabled:text-gray-400"
+                        aria-label="Archiver"
+                        title="Archiver"
+                      >
+                        <FaTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={14} className="py-4 text-center text-gray-600">
+                  Aucune inscription trouvée.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 // Composant principal du backoffice
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -150,6 +407,7 @@ export default function SessionsPage() {
     id_verso: "",
     permis_recto: "",
     permis_verso: "",
+    letter_48N: "",
   });
 
   const [newFiles, setNewFiles] = useState<{ [key: string]: File | null }>({
@@ -157,6 +415,7 @@ export default function SessionsPage() {
     scanPermisVerso: null,
     scanIdentiteRecto: null,
     scanIdentiteVerso: null,
+    scanletter_48N: null,
   });
 
   const [editFormData, setEditFormData] = useState<FormData>({
@@ -174,6 +433,7 @@ export default function SessionsPage() {
     id_verso: "",
     permis_recto: "",
     permis_verso: "",
+    letter_48N: "",
   });
 
   const [editFiles, setEditFiles] = useState<{ [key: string]: File | null }>({
@@ -181,6 +441,7 @@ export default function SessionsPage() {
     scanPermisVerso: null,
     scanIdentiteRecto: null,
     scanIdentiteVerso: null,
+    scanletter_48N: null,
   });
 
   const fetchData = async () => {
@@ -296,6 +557,7 @@ export default function SessionsPage() {
           id_verso: uploadedPaths.id_verso || null,
           permis_recto: uploadedPaths.permis_recto || null,
           permis_verso: uploadedPaths.permis_verso || null,
+          letter_48N: uploadedPaths.letter_48N || null,
         }),
       });
 
@@ -320,12 +582,14 @@ export default function SessionsPage() {
         id_verso: "",
         permis_recto: "",
         permis_verso: "",
+        letter_48N: "",
       });
       setNewFiles({
         scanPermisRecto: null,
         scanPermisVerso: null,
         scanIdentiteRecto: null,
         scanIdentiteVerso: null,
+        scanletter_48N: null,
       });
       await fetchData();
     } catch (err) {
@@ -360,6 +624,7 @@ export default function SessionsPage() {
           id_verso: uploadedPaths.id_verso || editFormData.id_verso,
           permis_recto: uploadedPaths.permis_recto || editFormData.permis_recto,
           permis_verso: uploadedPaths.permis_verso || editFormData.permis_verso,
+          letter_48N: uploadedPaths.letter_48N || editFormData.letter_48N,
         }),
       });
 
@@ -423,6 +688,39 @@ export default function SessionsPage() {
     }
   };
 
+  const handleGenerateAttestation = async (sessionId: number, userId: number, nom: string, prenom: string) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/generate-attestation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, userId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la génération de l'attestation");
+      }
+
+      const updatedResponse = await fetch(`/api/session-users?userId=${userId}&sessionId=${sessionId}`);
+      if (!updatedResponse.ok) {
+        throw new Error("Erreur lors de la récupération de l'attestation");
+      }
+      const updatedData = await updatedResponse.json();
+      const updatedSessionUser = updatedData[0];
+
+      if (updatedSessionUser?.user?.attestationPdfUrl) {
+        await downloadAttestation(updatedSessionUser.user.attestationPdfUrl, nom, prenom);
+      }
+
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue lors de la génération");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const downloadAttestation = async (url: string, nom: string, prenom: string) => {
     try {
       const response = await fetch(url);
@@ -455,12 +753,14 @@ export default function SessionsPage() {
       id_verso: sessionUser.user.id_verso || "",
       permis_recto: sessionUser.user.permis_recto || "",
       permis_verso: sessionUser.user.permis_verso || "",
+      letter_48N: sessionUser.user.letter_48N || "",
     });
     setEditFiles({
       scanPermisRecto: null,
       scanPermisVerso: null,
       scanIdentiteRecto: null,
       scanIdentiteVerso: null,
+      scanletter_48N: null,
     });
     setShowEditModal(true);
   };
@@ -480,7 +780,9 @@ export default function SessionsPage() {
           className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
           title="Ajouter une inscription"
         >
-          <PlusCircleIcon className="w-6 h-6" />
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
         </button>
       </div>
 
@@ -541,301 +843,15 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      <ul className="space-y-6">
-        {filteredSessionUsers.length ? (
-          filteredSessionUsers.map((su) => (
-            <li
-              key={su.id}
-              className="border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <p className="font-medium text-lg text-blue-700">{su.user.prenom} {su.user.nom}</p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {su.user.email}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                      />
-                    </svg>
-                    {su.user.telephone}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
-                      />
-                    </svg>
-                    <span className="font-medium">Permis:</span> {su.user.numeroPermis}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                      />
-                    </svg>
-                    <span className="font-medium">Cas:</span> {su.user.casStage}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-md font-bold text-gray-800 bg-gray-100 p-2 rounded">
-                    Session {su.session.numeroStageAnts}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    Du {new Date(su.session.startDate).toLocaleDateString()} au{" "}
-                    {new Date(su.session.endDate).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <span className="font-medium">Lieu:</span> {su.session.location}
-                  </p>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="font-medium">Inscription:</span> {new Date(su.createdAt).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        su.isPaid ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {su.isPaid ? "Payé" : "Non payé"}
-                    </span>
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex flex-col">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Documents:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {su.user.id_recto && (
-                        <a
-                          href={su.user.id_recto}
-                          target="_blank"
-                          className="text-xs text-blue-600 hover:underline bg-blue-50 p-2 rounded flex items-center"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          CNI recto
-                        </a>
-                      )}
-                      {su.user.id_verso && (
-                        <a
-                          href={su.user.id_verso}
-                          target="_blank"
-                          className="text-xs text-blue-600 hover:underline bg-blue-50 p-2 rounded flex items-center"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          CNI verso
-                        </a>
-                      )}
-                      {su.user.permis_recto && (
-                        <a
-                          href={su.user.permis_recto}
-                          target="_blank"
-                          className="text-xs text-blue-600 hover:underline bg-blue-50 p-2 rounded flex items-center"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          Permis recto
-                        </a>
-                      )}
-                      {su.user.permis_verso && (
-                        <a
-                          href={su.user.permis_verso}
-                          target="_blank"
-                          className="text-xs text-blue-600 hover:underline bg-blue-50 p-2 rounded flex items-center"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          Permis verso
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  {su.user.attestationPdfUrl && (
-                    <button
-                      onClick={() => downloadAttestation(su.user.attestationPdfUrl!, su.user.nom, su.user.prenom)}
-                      className="text-blue-600 hover:underline text-sm flex items-center"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Télécharger attestation
-                    </button>
-                  )}
-                  <div className="flex justify-end space-x-3 mt-4">
-                    {!su.isPaid && (
-                      <button
-                        onClick={() => handleMarkAsPaid(su.id)}
-                        disabled={isSubmitting}
-                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 text-sm transition-colors"
-                      >
-                        Marquer payé
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openEditModal(su)}
-                      className="p-2 text-gray-600 hover:text-blue-600"
-                      title="Modifier"
-                    >
-                      <PencilIcon className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleArchiveSessionUser(su.id)}
-                      disabled={isSubmitting}
-                      className="p-2 text-gray-600 hover:text-red-600"
-                      title="Archiver"
-                    >
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </li>
-          ))
-        ) : (
-          <li className="text-gray-600 text-center py-4">Aucune inscription trouvée.</li>
-        )}
-      </ul>
+      <SessionUsersTable
+        filteredSessionUsers={filteredSessionUsers}
+        downloadAttestation={downloadAttestation}
+        handleGenerateAttestation={handleGenerateAttestation}
+        handleMarkAsPaid={handleMarkAsPaid}
+        openEditModal={openEditModal}
+        handleArchiveSessionUser={handleArchiveSessionUser}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Modal d’ajout */}
       {showAddModal && (
@@ -904,6 +920,7 @@ export default function SessionsPage() {
                   { name: "scanIdentiteVerso", label: "Carte d’identité (verso)" },
                   { name: "scanPermisRecto", label: "Permis (recto)" },
                   { name: "scanPermisVerso", label: "Permis (verso)" },
+                  { name: "scanletter_48N", label: "Lettre 48N" },
                 ].map((field) => (
                   <div key={field.name}>
                     <label className="block text-sm font-medium text-gray-700">{field.label}</label>
@@ -1005,6 +1022,7 @@ export default function SessionsPage() {
                   { name: "scanIdentiteVerso", label: "Carte d’identité (verso)", key: "id_verso" },
                   { name: "scanPermisRecto", label: "Permis (recto)", key: "permis_recto" },
                   { name: "scanPermisVerso", label: "Permis (verso)", key: "permis_verso" },
+                  { name: "scanletter_48N", label: "Lettre 48N", key: "letter_48N" },
                 ].map((field) => (
                   <div key={field.name}>
                     <label className="block text-sm font-medium text-gray-700">{field.label}</label>

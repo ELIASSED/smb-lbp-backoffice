@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ClientSessionProvider>
           <Header />
           <div className="flex-grow md:ml-64"> {/* Add left margin for desktop to account for sidebar */}
-            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-24 md:pt-8">{children}</main>
+            <main className="max-w-8xl mx-auto px-4 sm:px-6 py-8 pt-24 md:pt-8">{children}</main>
           </div>
           <div className="md:ml-64"> {/* Add left margin for desktop to account for sidebar */}
 
